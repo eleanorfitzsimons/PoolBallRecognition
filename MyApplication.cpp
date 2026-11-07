@@ -15,7 +15,32 @@ using namespace std;
 
 
 //perspective transform
-Mat perspectiveTransform(Mat original) {}
+Mat perspectiveTransform(Mat original) {
+
+	//define source and destination points
+	source_points[4] = {
+		point2f(337.0f, 35.0f),
+		point2f(1570.0f, 21.0f),
+		point2f(38.0f, 4720.0f),
+		point2f(1888.0f, 451.0f)
+	};
+	destination_points[4] = {
+		point2f(0.0f, 0.0f),
+		point2f(1433.0f, 0.0f),
+		point2f(0.0f, 682.0f),
+		point2f(1433.0f, 682.0f)
+	};
+
+	//calculate taransform matrix
+	perspective_matrix = getPerspectiveTransform(source_points, destination_points);
+
+	//apply transform
+	Mat transformed;
+	warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
+
+	//return transformed image
+	return trandformed;
+}
 
 //segment table... seprate green from balls
 Mat segmentTable(Mat transformed) {}
