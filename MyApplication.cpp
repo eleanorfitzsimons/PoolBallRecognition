@@ -46,31 +46,37 @@ Mat perspectiveTransform(const Mat& original) {
 
 //segment table... seprate green from balls
 Mat segmentTable(Mat transformed) {
+
 	Mat filtered;
-	//apply means shift filtering... smooth regions of similar colour
+
+	//apply means shift filtering
+	//smooth regions of similar colour
+	pyrMeanShiftFiltering(transformed, filtered, 10, 20, 1); //fix these values: spacial radius, colour radius, max pyramid level
+	//test if flood fill will improve segmentation
+
+	//then identify green regions by histogramming
+	//for binary
+	//cca
+	//then region featrues determine whats a ball
 
 
-	//then identify green regions   
-	//inRange??
-
-
-	//determine mask of bg
-	Mat bgMask;
-
-	//apply bg classification
-
-
-	//create foreground mask
-
-	Mat fgMask;
-	bitwise_not(bgMask); //is this a thing
-
-
-
+	fgMask = createForegroundMask(filtered);
 
 	return fgMask;
 }
+Mat createForegroundMask(cost Mat& filtered) {
 
+	//convert to hsv colour space
+	Mat hsv;
+	cvtColor(filtered, hsv, COLOR_BGR2HSV);	//converts to HSV colour space
+
+	//identify green regions
+	//background estimation with histogramming
+
+
+	//invert bg mask
+	return bitwise_not(bgMask);
+}
 
 		
 /*
