@@ -43,10 +43,37 @@ Mat perspectiveTransform(const Mat& original) {
 	return transformed;
 }
 
-/*
-//segment table... seprate green from balls
-Mat segmentTable(Mat transformed) {}
 
+//segment table... seprate green from balls
+Mat segmentTable(Mat transformed) {
+	Mat filtered;
+	//apply means shift filtering... smooth regions of similar colour
+
+
+	//then identify green regions   
+	//inRange??
+
+
+	//determine mask of bg
+	Mat bgMask;
+
+	//apply bg classification
+
+
+	//create foreground mask
+
+	Mat fgMask;
+	bitwise_not(bgMask); //is this a thing
+
+
+
+
+	return fgMask;
+}
+
+
+		
+/*
 
 //find positions of balls
 vector<Point2f> findBalls(Mat mask) {} //returns vector of positions of balls in the image 
@@ -115,3 +142,5 @@ int main() {
 	MyApplication();
 	return 0;
 }
+
+//the transformation not being perfect, criticise gt
