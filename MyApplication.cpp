@@ -13,38 +13,6 @@ using namespace std;
 // STAGE 1: Dectecting the balls 
 //////////////////////////////////
 
-
-//perspective transform
-Mat perspectiveTransform(const Mat& original) {
-
-	//define source and destination points
-	Point2f source_points[4] = {
-		Point2f(337.0f, 35.0f),
-		Point2f(1570.0f, 21.0f),
-		Point2f(38.0f, 472.0f),
-		Point2f(1888.0f, 451.0f)
-	};
-	Point2f destination_points[4] = {
-		Point2f(0.0f, 0.0f),
-		Point2f(1433.0f, 0.0f),
-		Point2f(0.0f, 682.0f),
-		Point2f(1433.0f, 682.0f)
-	};
-
-	//calculate taransform matrix
-	Mat perspective_matrix = getPerspectiveTransform(source_points, destination_points);
-
-	//apply transform
-	Mat transformed;
-	warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
-
-	//return transformed image
-	return transformed;
-}
-
-
-
-
 //find potential circles
 vector<Vec3f> findBalls(const Mat& original) {
 	//changed to 3f now we keep the radius
@@ -135,11 +103,42 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
 
     return validBalls;
 }
-/*
+
 vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
-	//perspective transform
+    //perspective transform
+
+    //define source and destination points
+    Point2f source_points[4] = {
+        Point2f(337.0f, 35.0f),
+        Point2f(1570.0f, 21.0f),
+        Point2f(38.0f, 472.0f),
+        Point2f(1888.0f, 451.0f)
+    };
+
+    Point2f destination_points[4] = {
+        Point2f(0.0f, 0.0f),
+        Point2f(1433.0f, 0.0f),
+        Point2f(0.0f, 682.0f),
+        Point2f(1433.0f, 682.0f)
+    };
+
+    //calculate transform matrix
+    Mat perspective_matrix =
+        getPerspectiveTransform(source_points, destination_points);
+
+    //apply transform to ball positions
+    vector<Point2f> transformedPositions;
+
+    if (!ogPositions.empty()) {
+        cv::perspectiveTransform(
+            ogPositions,
+            transformedPositions,
+            perspective_matrix
+        );
+    }
+
+    return transformedPositions;
 }
-*/
 
 int findBgHue(const Mat& hsv){
     //calculate hue histogram
@@ -227,8 +226,10 @@ Mat segmentTable(const Mat & original){
 ////////////////////////////////////
 
 
-int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {}
+int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
 
+}
+//
 
 
 ///////////////////////////////////
