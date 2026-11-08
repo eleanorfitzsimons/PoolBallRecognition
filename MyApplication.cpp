@@ -11,7 +11,7 @@ using namespace std;
 
 
 //////////////////////////////////
-// STAGE 1: Dectecting the balls
+// STAGE 1: Dectecting the balls 
 //////////////////////////////////
 
 
@@ -142,13 +142,19 @@ int findBgHue(const Mat& hsv){
 
 	return bgHue;
 }
-/*
+
 
 //find positions of balls
-vector<Point2f> findBalls(Mat mask) {} //returns vector of positions of balls in the image 
-	//look over vectors
+vector<Point2f> findBalls(Mat mask) {
+	//takes fg mask of potentiall ball regions
+	//cca.. separate fg features
+	//region features - area, circularity??
+	//filter regions not balls
+	//calculate centres
+} //returns vector of positions of balls in the image 
+	
 
-
+/*
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
