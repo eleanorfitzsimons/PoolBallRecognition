@@ -65,19 +65,34 @@ Mat segmentTable(Mat transformed) {
 	return fgMask;
 }
 Mat createForegroundMask(const Mat& filtered) {
-
-	//convert to hsv colour space
+	//ADAPTIVE THRESHOLDING WITH HISTOGRAMMING TO FIND BG
+	
+	//convert to hsv colour space and histogram to find dominant colour
 	Mat hsv;
 	cvtColor(filtered, hsv, COLOR_BGR2HSV);	//converts to HSV colour space
-
-	//identify green regions
-	//background estimation with histogramming
 	int bgHue = findBgHue(hsv);
 
-	//adaptive thresholding
-	//bg once its within a certain tolerance
-	Mat bgMask;
+	//tolerance
+	const int HUE_TOLERANCE = 12; /////////NEEDS TESTING
+	
+	//binary bg mask
+	Mat bgMask = Mat::zeros(hsv.size(), CV_8UC1);
 
+	//look at every px for th
+	for (int y = 0; y < hsv.rows; y++ ){
+		for (int x = 0; x < hsv.cols; x++){
+		
+			int hue = hsv.at<Vec3b>(y, x)[0];	//get px hue
+			int difference = abs(hue - bgHue); 	 //diff from th
+			difference = min(difference, 180 - difference) //account for hue wrapping
+
+			//compare with th
+			if (difference <= HUE_TOLERANCE){
+				bgMask.at<uchar>(y, x) = 255;
+			}
+		}
+	}
+	
 	//invert bg mask
 	Mat fgMask;
 	bitwise_not(bgMask, fgMask);
@@ -85,14 +100,14 @@ Mat createForegroundMask(const Mat& filtered) {
 }
 
 int findBgHue(const Mat& hsv){
-	//calculate hue histogram 
+	//calculate hue histogram
+	//2d hue saturation for robustness to lighting??????
 
 	//histogram parameters
 	int histSize = 30; 								//bins (each being 6)
 	float hueRange[] = {0, 180);					//values covered by hist
 	const float* ranges[] = {hueRange};				//format hist fn needs
 	int channels[] = {0};		
-	//2d hue saturation for robustness to lighting??
 
 
 	//calculate histogram
