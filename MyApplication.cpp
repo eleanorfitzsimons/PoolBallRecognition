@@ -9,9 +9,8 @@ using namespace cv;
 using namespace std;
 
 
-
 //////////////////////////////////
-// STAGE 1: Dectecting the balls
+// STAGE 1: Dectecting the balls 
 //////////////////////////////////
 
 
@@ -44,48 +43,28 @@ Mat perspectiveTransform(const Mat& original) {
 }
 
 
-//segment table... seprate green from balls
-Mat segmentTable(Mat transformed) {
 
-	Mat filtered;
-
-	//apply means shift filtering
-	//smooth regions of similar colour
-	pyrMeanShiftFiltering(transformed, filtered, 10, 20, 1); //fix these values: spacial radius, colour radius, max pyramid level
-	//test if flood fill will improve segmentation
-
-	//then identify green regions by histogramming
-	//for binary
-	//cca
-	//then region featrues determine whats a ball
-
-
-	fgMask = createForegroundMask(filtered);
-
-	return fgMask;
-}
-Mat createForegroundMask(cost Mat& filtered) {
-
-	//convert to hsv colour space
-	Mat hsv;
-	cvtColor(filtered, hsv, COLOR_BGR2HSV);	//converts to HSV colour space
-
-	//identify green regions
-	//background estimation with histogramming
-
-
-	//invert bg mask
-	return bitwise_not(bgMask);
-}
-
-		
-/*
 
 //find positions of balls
-vector<Point2f> findBalls(Mat mask) {} //returns vector of positions of balls in the image 
-	//look over vectors
+vector<Point2f> findBalls(const Mat& transformed) {
 
+	vector<Point2f> ballPositions;
+	//converting to gs 
+	Mat gray;
+	cvtColor(transformed, gray, COLOR_BGR2GRAY);
 
+	//reduce noise
+	GaussianBlur(gray, gray, Size(5, 5), 1.5); //ok tune parameters?????
+
+	//testing: inspect image
+	imshow("Grayscale Image", gray);)
+		
+
+	return ballPositions;
+} //returns vector of positions of balls in the image 
+	
+
+/*
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
