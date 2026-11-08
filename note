@@ -1,7 +1,24 @@
 
-	pyrMeanShiftFiltering(image2, clustered_image, 40, 40, 2);
-	floodFillPostprocess(clustered_image, Scalar::all(2));
-	output1 = JoinImagesHorizontally(image2, "Original Image", clustered_image, "Mean Shift (40,40)", 4);
-	imshow("Mean Shift Segmentation", output1);
-	c = cv::waitKey();
-	cv::destroyAllWindows();
+Mat histogramImage = Mat::zeros(400, 600, CV_8UC3);
+Mat displayHist;
+
+
+normalize(hueHist, displayHist, 0, 380, NORM_MINMAX);
+
+int binWidth = histogramImage.cols / histSize;
+
+for (int i = 0; i < histSize; i++)
+{
+    int barHeight = cvRound(displayHist.at<float>(i));
+
+    rectangle(
+        histogramImage,
+        Point(i * binWidth, histogramImage.rows - 1),
+        Point((i + 1) * binWidth - 1,
+              histogramImage.rows - 1 - barHeight),
+        Scalar(255, 255, 255),
+        FILLED
+    );
+}
+
+imshow("Hue Histogram", histogramImage);
