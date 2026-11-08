@@ -112,9 +112,85 @@ vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
 	//perspective transform
 }
 
+int findBgHue(const Mat& hsv){
+    //calculate hue histogram
+    //2d hue saturation for robustness to lighting??????
+
+    //histogram parameters
+    int histSize = 30;                            //bins (each being 6)
+    float hueRange[] = {0, 180};                  //values covered by hist
+    const float* ranges[] = {hueRange};           //format hist fn needs
+    int channels[] = {0};
+
+    //calculate histogram
+    Mat hueHist;
+    calcHist(
+        &hsv,       //input
+        1,          //no of images
+        channels,   //channel - 0 is hue
+        Mat(),      //no mask, using all px ????????????? could change???
+        hueHist,    //output
+        1,          //dimensions
+        &histSize,  //num bins
+        ranges      //hue range
+    );
+
+    //find most frequent bin
+    Point maxLocation;
+    minMaxLoc(
+        hueHist,
+        nullptr,
+        nullptr,
+        nullptr,
+        &maxLocation
+    );
+
+    int dominantBin = maxLocation.y;
+
+    //bin index to hue val
+    float binWidth = 180.0f / histSize;
+
+    int bgHue = static_cast<int>((dominantBin + 0.5f) * binWidth);
+
+    return bgHue;
+}
 Mat segmentTable(){
-	//estimate the cloth colout and create fg mask
-	//go back and get the old fn
+
+	//mean shift
+    Mat filtered;
+    pyrMeanShiftFiltering(original, filtered, 10, 20, 1);
+
+	//hsv
+	Mat hsv;
+    cvtColor(filtered, hsv, COLOR_BGR2HSV);
+
+	//bg hue fn (uses hist)
+	int bgHue = findBgHue(hsv);
+
+	//binary bg mask
+	const int HUE_TOLERANCE = 12;
+    Mat bgMask = Mat::zeros(hsv.size(), CV_8UC1);
+
+	
+    for (int y = 0; y < hsv.rows; y++) {
+        for (int x = 0; x < hsv.cols; x++) {
+
+            int hue = hsv.at<Vec3b>(y, x)[0];
+
+            int difference = abs(hue - bgHue);
+            difference = min(difference, 180 - difference);
+
+            if (difference <= HUE_TOLERANCE) {
+                bgMask.at<uchar>(y, x) = 255;
+            }
+        }
+    }
+
+	//invert
+	Mat fgMask;
+    bitwise_not(bgMask, fgMask);
+
+    return fgMask;
 }
 /*
 ////////////////////////////////////
