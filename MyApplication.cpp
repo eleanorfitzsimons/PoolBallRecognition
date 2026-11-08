@@ -45,7 +45,7 @@ Mat perspectiveTransform(const Mat& original) {
 
 
 
-//find positions of balls
+//find potential circles
 vector<Point2f> findBalls(const Mat& transformed) {
 
 	vector<Point2f> ballPositions;
@@ -70,7 +70,7 @@ vector<Point2f> findBalls(const Mat& transformed) {
 		1, //dp accymulator resolution
 		30, //min distance between circles
 		100, //param1: higher threshold for Canny edge detector
-		25, //param2: threshold for center detection
+		20, //param2: threshold for center detection
 		15, //min radius
 		28  //max radius
 	);
@@ -85,7 +85,16 @@ vector<Point2f> findBalls(const Mat& transformed) {
 	return ballPositions;
 } //returns vector of positions of balls in the image 
 	
+//filter balls, remove fasle pos
+vector<Point2f> filterBalls(const vector<Point2f>& possible) {
+	//colour 
+	//could use old mask
+	//we akso know has to be wi table corners
+}
 
+vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
+	//perspective transform
+}
 /*
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
@@ -127,21 +136,34 @@ void MyApplication() {
 
 	//perspective transform
 	Mat transformed = perspectiveTransform(original);
-	
 
+	//detect balls
+	vector<Point2f> ballPositions = findBalls(transformed);
+	vector<Point2f> ballPositionsog = findBalls(original);
 
+	cout << "Number of balls detected in transformed image: " << ballPositions.size() << endl;
+
+	Mat result1 = transformed.clone();
+	Mat result2 = original.clone();
+	for (int i = 0; i < ballPositions.size(); i++) {
+		circle(result1, ballPositions[i], 5, Scalar(0, 0, 255), -1);
+	}
+	for (int i = 0; i < ballPositionsog.size(); i++) {
+		circle(result2, ballPositionsog[i], 5, Scalar(0, 0, 255), -1);
+	}
+
+	imshow("Detected Balls in Transformed Image", result1);
+	imshow("Detected Balls in Original Image", result2);
 	/*
-	//segment background
-	Mat mask = segmentTable(transformed);
-
+	
 	//detect balls
 	vector<Point2f> ballPositions = findBalls(mask);
 	//reconginse balls
 	
 	//evaluate results
 	*/
-	imshow("Original Image", original);
-	imshow("Transformed Image", transformed);
+	//imshow("Original Image", original);
+	//imshow("Transformed Image", transformed);
 	waitKey(0); //keep window open  
 }
 
