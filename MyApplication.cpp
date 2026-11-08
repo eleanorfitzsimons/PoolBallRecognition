@@ -9,7 +9,6 @@ using namespace cv;
 using namespace std;
 
 
-
 //////////////////////////////////
 // STAGE 1: Dectecting the balls 
 //////////////////////////////////
@@ -43,121 +42,25 @@ Mat perspectiveTransform(const Mat& original) {
 	return transformed;
 }
 
-//what am i doing with this function 
-//segment table... seprate green from balls
-Mat segmentTable(Mat transformed) {
 
-	Mat filtered;
-
-	//apply means shift filtering
-	pyrMeanShiftFiltering(transformed, filtered, 10, 20, 1); //fix these values: spacial radius, colour radius, max pyramid level
-	//test if flood fill will improve segmentation
-
-	Mat fgMask = createForegroundMask(filtered);
-
-	return fgMask;
-}
-Mat createForegroundMask(const Mat& filtered) {
-	//ADAPTIVE THRESHOLDING WITH HISTOGRAMMING TO FIND BG
-	
-	//convert to hsv colour space and histogram to find dominant colour
-	Mat hsv;
-	cvtColor(filtered, hsv, COLOR_BGR2HSV);	//converts to HSV colour space
-	int bgHue = findBgHue(hsv);
-
-	//tolerance
-	const int HUE_TOLERANCE = 12; /////////NEEDS TESTING
-	
-	//binary bg mask
-	Mat bgMask = Mat::zeros(hsv.size(), CV_8UC1);
-
-	//look at every px for th
-	for (int y = 0; y < hsv.rows; y++ ){
-		for (int x = 0; x < hsv.cols; x++){
-		
-			int hue = hsv.at<Vec3b>(y, x)[0];	//get px hue
-			int difference = abs(hue - bgHue); 	 //diff from th
-			difference = min(difference, 180 - difference) //account for hue wrapping
-
-			//compare with th
-			if (difference <= HUE_TOLERANCE){
-				bgMask.at<uchar>(y, x) = 255;
-			}
-		}
-	}
-	
-	//invert bg mask
-	Mat fgMask;
-	bitwise_not(bgMask, fgMask);
-	return fgMask;
-}
-
-int findBgHue(const Mat& hsv){
-	//calculate hue histogram
-	//2d hue saturation for robustness to lighting??????
-
-	//histogram parameters
-	int histSize = 30; 								//bins (each being 6)
-	float hueRange[] = {0, 180);					//values covered by hist
-	const float* ranges[] = {hueRange};				//format hist fn needs
-	int channels[] = {0};		
-
-
-	//calculate histogram
-	Mat hueHistogram;
-	calcHist(
-		&hsv,		//input 
-		1,			//no of images
-		channels,	//channel - 0 is hue
-		Mat(),		//no mask, using all px ????????????? could change???
-		hueHist,	//output 
-		1,			//dimensions
-		&histSize,  //num bins
-		ranges		//hue range
-	);
-
-
-	//find most frequent bin
-	Point maxLocation;
-	minMaxLoc(
-		hueHist, 
-		nullptr,
-		nullptr,
-		nullptr,
-		&maxLocation
-	);
-	int dominantBin = maxLocation.y;
-
-	//bin index to hue val
-	float binWidth = 180.0f / histSize;
-	
-	int bgHue = static_cast<int>((dominantBin + 0.5f) * binWidth);
-
-	return bgHue;
-}
 
 
 //find positions of balls
-vector<Point2f> findBalls(Mat mask) {
-	//takes fg mask of potentiall ball regions
-	//cca.. separate fg features
-	//region features - area, circularity??
-	//filter regions not balls
-	//calculate centres
+vector<Point2f> findBalls(const Mat& transformed) {
 
+	vector<Point2f> ballPositions;
+	//converting to gs 
+	Mat gray;
+	cvtColor(transformed, gray, COLOR_BGR2GRAY);
 
-	//find contours and connected regions
+	//reduce noise
+	GaussianBlur(gray, gray, Size(5, 5), 1.5); //ok tune parameters?????
 
-	vector<Point2f> point;
-	//for each regtiton
-		//area, perimiter, circularity
-		//ball decision
-		//calc centroid
-
-	//robustness for touching balls
+	//testing: inspect image
+	imshow("Grayscale Image", gray);)
 		
 
-	return point
+	return ballPositions;
 } //returns vector of positions of balls in the image 
 	
 
