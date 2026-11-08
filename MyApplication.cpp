@@ -46,9 +46,10 @@ Mat perspectiveTransform(const Mat& original) {
 
 
 //find potential circles
-vector<Point2f> findBalls(const Mat& original) {
+vector<vec3f> findBalls(const Mat& original) {
+	//changed to 3f now we keep the circumference
+	
 
-	vector<Point2f> ballPositions;
 	//converting to gs 
 	Mat gray;
 	cvtColor(original, gray, COLOR_BGR2GRAY);
@@ -73,21 +74,7 @@ vector<Point2f> findBalls(const Mat& original) {
 		28 //max radius
 	);
 	
-	//visulaise detected circles
-	Mat result = original.clone();
-
-	for (int i = 0; i < circles.size(); i++)
-	{
-		Point2f center(circles[i][0], circles[i][1]);
-		int radius = cvRound(circles[i][2]);
-		ballPositions.push_back(center);
-
-		circle(result, center, radius, Scalar(0, 255, 0), 2); //draw circle
-		circle(result, center, 2, Scalar(0, 255,0), 3); //draw center
-	}
-		
-	imshow("Detected Circles", result);
-	return ballPositions;
+	return circles;
 } //returns vector of positions of balls in the image 
 
 //filter balls, remove fasle pos
@@ -120,11 +107,16 @@ vector<Point2f> filterBalls(const vector<Point2f>& possible) {
 	//we akso know has to be wi table corners
 	return validBalls;
 }
-/*
+
 vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
 	//perspective transform
 }
 
+Mat segmentTable(){
+	//estimate the cloth colout and create fg mask
+	//go back and get the old fn
+}
+/*
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
