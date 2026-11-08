@@ -60,11 +60,11 @@ Mat segmentTable(Mat transformed) {
 	//then region featrues determine whats a ball
 
 
-	fgMask = createForegroundMask(filtered);
+	Mat fgMask = createForegroundMask(filtered);
 
 	return fgMask;
 }
-Mat createForegroundMask(cost Mat& filtered) {
+Mat createForegroundMask(const Mat& filtered) {
 
 	//convert to hsv colour space
 	Mat hsv;
@@ -72,13 +72,61 @@ Mat createForegroundMask(cost Mat& filtered) {
 
 	//identify green regions
 	//background estimation with histogramming
+	int bgHue = findBgHue(hsv);
 
+	//adaptive thresholding
+	//bg once its within a certain tolerance
+	Mat bgMask;
 
 	//invert bg mask
-	return bitwise_not(bgMask);
+	Mat fgMask;
+	bitwise_not(bgMask, fgMask);
+	return fgMask;
 }
 
-		
+int findBgHue(const Mat& hsv){
+	//calculate hue histogram 
+
+	//histogram parameters
+	int histSize = 30; 								//bins (each being 6)
+	float hueRange[] = {0, 180);					//values covered by hist
+	const float* ranges[] = {hueRange};				//format hist fn needs
+	int channels[] = {0};		
+	//2d hue saturation for robustness to lighting??
+
+
+	//calculate histogram
+	Mat hueHistogram;
+	calcHist(
+		&hsv,		//input 
+		1,			//no of images
+		channels,	//channel - 0 is hue
+		Mat(),		//no mask, using all px ????????????? could change???
+		hueHist,	//output 
+		1,			//dimensions
+		&histSize,  //num bins
+		ranges		//hue range
+	);
+
+
+	//find most frequent bin
+	Point maxLocation;
+	minMaxLoc(
+		hueHist, 
+		nullptr,
+		nullptr,
+		nullptr,
+		&maxLocation
+	);
+	int dominantBin = maxLocation.y;
+
+	//bin index to hue val
+	float binWidth = 180.0f / histSize;
+	
+	int bgHue = static_cast<int>((dominantBin + 0.5f) * binWidth);
+
+	return bgHue;
+}
 /*
 
 //find positions of balls
