@@ -43,22 +43,15 @@ Mat perspectiveTransform(const Mat& original) {
 	return transformed;
 }
 
-
+//what am i doing with this function 
 //segment table... seprate green from balls
 Mat segmentTable(Mat transformed) {
 
 	Mat filtered;
 
 	//apply means shift filtering
-	//smooth regions of similar colour
 	pyrMeanShiftFiltering(transformed, filtered, 10, 20, 1); //fix these values: spacial radius, colour radius, max pyramid level
 	//test if flood fill will improve segmentation
-
-	//then identify green regions by histogramming
-	//for binary
-	//cca
-	//then region featrues determine whats a ball
-
 
 	Mat fgMask = createForegroundMask(filtered);
 
@@ -151,6 +144,20 @@ vector<Point2f> findBalls(Mat mask) {
 	//region features - area, circularity??
 	//filter regions not balls
 	//calculate centres
+
+
+	//find contours and connected regions
+
+	vector<Point2f> point;
+	//for each regtiton
+		//area, perimiter, circularity
+		//ball decision
+		//calc centroid
+
+	//robustness for touching balls
+		
+
+	return point
 } //returns vector of positions of balls in the image 
 	
 
