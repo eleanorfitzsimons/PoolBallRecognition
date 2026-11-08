@@ -46,19 +46,17 @@ Mat perspectiveTransform(const Mat& original) {
 
 
 //find potential circles
-vector<Point2f> findBalls(const Mat& transformed) {
+vector<Point2f> findBalls(const Mat& original) {
 
 	vector<Point2f> ballPositions;
 	//converting to gs 
 	Mat gray;
-	cvtColor(transformed, gray, COLOR_BGR2GRAY);
+	cvtColor(original, gray, COLOR_BGR2GRAY);
 
 	//reduce noise
 	Mat blurred;
 	GaussianBlur(gray, blurred, Size(5, 5), 1.5); //ok tune parameters?????
 
-	//testing: inspect image
-	imshow("Grayscale Image", gray);
 
 	//detect circles using HoughCircles
 	vector<Vec3f> circles;
@@ -68,34 +66,65 @@ vector<Point2f> findBalls(const Mat& transformed) {
 		circles,
 		HOUGH_GRADIENT,
 		1, //dp accymulator resolution
-		30, //min distance between circles
-		100, //param1: higher threshold for Canny edge detector
+		20, //min distance between circles
+		100, //param1: higher threshold for Canny edge detector  
 		20, //param2: threshold for center detection
 		15, //min radius
 		28  //max radius
 	);
+	
+	//visulaise detected circles
+	Mat result = original.clone();
 
 	for (int i = 0; i < circles.size(); i++)
 	{
 		Point2f center(circles[i][0], circles[i][1]);
+		int radius = cvRound(circles[i][2]);
 		ballPositions.push_back(center);
+
+		circle(result, center, radius, Scalar(0, 255, 0), 2); //draw circle
+		circle(result, center, 2, Scalar(0, 255,0), 3); //draw center
 	}
 		
-
+	imshow("Detected Circles", result);
 	return ballPositions;
 } //returns vector of positions of balls in the image 
-	
+
 //filter balls, remove fasle pos
 vector<Point2f> filterBalls(const vector<Point2f>& possible) {
+
+	vector<Point2f> validBalls;
+
+	//within table coords
+	vector<Point> tableCorners = {
+		Point(337, 35),
+		Point(1570, 21),
+		Point(1888, 451),
+		Point(38, 472)
+	};
+	
+	for (const Point2f& centre : possible) {
+
+		double inside = pointPolygonTest(
+			tableCorners,
+			centre,
+			false
+		);
+
+		if (inside >= 0) {
+			validBalls.push_back(centre);
+		}
+	}
 	//colour 
 	//could use old mask
 	//we akso know has to be wi table corners
+	return validBalls;
 }
-
+/*
 vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
 	//perspective transform
 }
-/*
+
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
@@ -138,22 +167,15 @@ void MyApplication() {
 	Mat transformed = perspectiveTransform(original);
 
 	//detect balls
-	vector<Point2f> ballPositions = findBalls(transformed);
-	vector<Point2f> ballPositionsog = findBalls(original);
 
-	cout << "Number of balls detected in transformed image: " << ballPositions.size() << endl;
-
-	Mat result1 = transformed.clone();
-	Mat result2 = original.clone();
+	vector<Point2f> potential = findBalls(original);
+	vector<Point2f> ballPositions = filterBalls (potential);
+	Mat filtered = original.clone();
 	for (int i = 0; i < ballPositions.size(); i++) {
-		circle(result1, ballPositions[i], 5, Scalar(0, 0, 255), -1);
+		circle(filtered, ballPositions[i], 5, Scalar(0, 0, 255), FILLED);
 	}
-	for (int i = 0; i < ballPositionsog.size(); i++) {
-		circle(result2, ballPositionsog[i], 5, Scalar(0, 0, 255), -1);
-	}
+	imshow("filtered result", filtered);
 
-	imshow("Detected Balls in Transformed Image", result1);
-	imshow("Detected Balls in Original Image", result2);
 	/*
 	
 	//detect balls
