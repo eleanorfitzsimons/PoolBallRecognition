@@ -46,8 +46,8 @@ Mat perspectiveTransform(const Mat& original) {
 
 
 //find potential circles
-vector<vec3f> findBalls(const Mat& original) {
-	//changed to 3f now we keep the circumference
+vector<Vec3f> findBalls(const Mat& original) {
+	//changed to 3f now we keep the radius
 	
 
 	//converting to gs 
@@ -76,41 +76,70 @@ vector<vec3f> findBalls(const Mat& original) {
 	
 	return circles;
 } //returns vector of positions of balls in the image 
-
 //filter balls, remove fasle pos
-vector<Point2f> filterBalls(const vector<Point2f>& possible) {
+vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
 
-	vector<Point2f> validBalls;
+    vector<Vec3f> validBalls;
 
-	//within table coords
-	vector<Point> tableCorners = {
-		Point(337, 35),
-		Point(1570, 21),
-		Point(1888, 451),
-		Point(38, 472)
-	};
-	
-	for (const Point2f& centre : possible) {
+    //FILTER INSIDE TABLE
+    vector<Point> tableCorners = {
+        Point(337, 35),
+        Point(1570, 21),
+        Point(1888, 451),
+        Point(38, 472)
+    };
 
-		double inside = pointPolygonTest(
-			tableCorners,
-			centre,
-			false
-		);
+    for (const Vec3f& ball : possible) {
 
-		if (inside >= 0) {
-			validBalls.push_back(centre);
-		}
-	}
-	//colour 
-	//could use old mask
-	//we akso know has to be wi table corners
-	return validBalls;
+        Point2f centre(ball[0], ball[1]);
+        int radius = cvRound(ball[2]);
+
+        double inside = pointPolygonTest(
+            tableCorners,
+            centre,
+            false
+        );
+
+        //skip balls outside table
+        if (inside < 0) {
+            continue;
+        }
+
+        //FILTER WITH MASK
+
+        //mask for filled circle
+        Mat circleMask = Mat::zeros(fgMask.size(), CV_8UC1);
+
+        circle(
+            circleMask,
+            centre,
+            max(1, radius - 3),
+            Scalar(255),
+            FILLED
+        );
+
+        int totalPixels = countNonZero(circleMask);
+
+        Mat foregroundInside;
+        bitwise_and(fgMask, circleMask, foregroundInside); //combine two masks and keep only if white in both
+
+        int foregroundPixels = countNonZero(foregroundInside);
+
+        float foregroundRatio =
+            static_cast<float>(foregroundPixels) / totalPixels;
+
+        if (foregroundRatio > 0.5f) { //TUNE
+            validBalls.push_back(ball);
+        }
+    }
+
+    return validBalls;
 }
-
+/*
 vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
 	//perspective transform
 }
+*/
 
 int findBgHue(const Mat& hsv){
     //calculate hue histogram
@@ -154,7 +183,7 @@ int findBgHue(const Mat& hsv){
 
     return bgHue;
 }
-Mat segmentTable(){
+Mat segmentTable(const Mat & original){
 
 	//mean shift
     Mat filtered;
@@ -231,27 +260,21 @@ void MyApplication() {
 
 	}
 
-	//perspective transform
-	Mat transformed = perspectiveTransform(original);
-
 	//detect balls
+	vector<Vec3f> potential = findBalls(original);
 
-	vector<Point2f> potential = findBalls(original);
-	vector<Point2f> ballPositions = filterBalls (potential);
-	Mat filtered = original.clone();
-	for (int i = 0; i < ballPositions.size(); i++) {
-		circle(filtered, ballPositions[i], 5, Scalar(0, 0, 255), FILLED);
-	}
-	imshow("filtered result", filtered);
+	//segment table
+	Mat fgMask = segmentTable(original);
 
-	/*
+	//filter potential balls
+	vector<Vec3f> ballPositions = filterBalls(potential, fgMask);
 	
-	//detect balls
-	vector<Point2f> ballPositions = findBalls(mask);
+	
+
 	//reconginse balls
 	
 	//evaluate results
-	*/
+	
 	//imshow("Original Image", original);
 	//imshow("Transformed Image", transformed);
 	waitKey(0); //keep window open  
