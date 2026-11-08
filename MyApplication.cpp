@@ -66,11 +66,11 @@ vector<Point2f> findBalls(const Mat& original) {
 		circles,
 		HOUGH_GRADIENT,
 		1, //dp accymulator resolution
-		20, //min distance between circles
+		30, //min distance between circles
 		100, //param1: higher threshold for Canny edge detector  
-		20, //param2: threshold for center detection
+		10, //param2: threshold for center detection
 		15, //min radius
-		28  //max radius
+		28 //max radius
 	);
 	
 	//visulaise detected circles
