@@ -1,0 +1,17 @@
+PLAN
+
+perspective transform
+  ↓
+mean shift 
+  ↓
+convert to hsv
+  ↓
+histogram to find cloth colour
+  ↓
+binary foreground mask
+  ↓
+cca
+  ↓
+region features
+  ↓
+identify balls
