@@ -54,10 +54,32 @@ vector<Point2f> findBalls(const Mat& transformed) {
 	cvtColor(transformed, gray, COLOR_BGR2GRAY);
 
 	//reduce noise
-	GaussianBlur(gray, gray, Size(5, 5), 1.5); //ok tune parameters?????
+	Mat blurred;
+	GaussianBlur(gray, blurred, Size(5, 5), 1.5); //ok tune parameters?????
 
 	//testing: inspect image
-	imshow("Grayscale Image", gray);)
+	imshow("Grayscale Image", gray);
+
+	//detect circles using HoughCircles
+	vector<Vec3f> circles;
+
+	HoughCircles(
+		blurred,
+		circles,
+		HOUGH_GRADIENT,
+		1, //dp accymulator resolution
+		30, //min distance between circles
+		100, //param1: higher threshold for Canny edge detector
+		25, //param2: threshold for center detection
+		15, //min radius
+		28  //max radius
+	);
+
+	for (int i = 0; i < circles.size(); i++)
+	{
+		Point2f center(circles[i][0], circles[i][1]);
+		ballPositions.push_back(center);
+	}
 		
 
 	return ballPositions;
