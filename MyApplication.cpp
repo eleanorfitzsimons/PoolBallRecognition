@@ -277,7 +277,44 @@ Mat segmentTable(const Mat& original) {
 ////////////////////////////////////
 
 //colour histogram from one ball
-Mat extractBallHist(){
+Mat extractBallHist(const Mat& hsv, Point2f centre, int radius){
+    //circuilar mask for ball
+    Mat ballMask = Mat::zeros(hsv.size(), CV_8UC1);
+
+
+    circle(
+        ballMask,
+        centre,
+        radius,
+        Scalar(255),
+        FILLED
+    );
+
+    //histogram parameters
+    int histSize[] = {30, 32}; //hue and saturation bins
+
+    float hueRange[] = {0, 180};
+    float satRange[] = {0, 256};
+
+    const float* ranges[] = {hueRange, satRange};
+    int channels[] = {0, 1}; //hue and saturation
+
+    //calculate HSV histogram
+    Mat hist;
+        calcHist(
+        &hsv,
+        1,
+        channels,
+        ballMask,
+        hist,
+        2,
+        histSize,
+        ranges
+    );
+        //normalise histogram
+    normalize(hist, hist, 1.0, 0.0, NORM_L1);
+
+    return hist;
 
 }
 //train model
