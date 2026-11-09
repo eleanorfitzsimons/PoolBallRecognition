@@ -3,7 +3,8 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
-
+#include <tuple>
+#include <algorithm>
 
 using namespace cv;
 using namespace std;
@@ -274,27 +275,101 @@ int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
 //predicted positions vs gt
 void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
     //max distance for correct match
+    const float MATCH_TOLERANCE = 15; ////TUNEEE
 
-    //loop through predicted ball positions
-        //dist to gt pos
-        //closest gt that hasnt already been matched
-        //if w/i th 
-            //tp
-            //record error
-            //gt ball matched
-        // else 
-            //fp
+    //counters
+    int TP = 0;
+    int FP = 0;
+    int FN = 0;
+
+    //tracking whihc gt balls are matched
+    vector<bool> matched(groundTruth.size(), false);
+
+    vector<tuple<float, int, int>> possibleMatches;
+    //loop through predicted positions
+    for (int i = 0; i < tablePositions.size(); i++) {
+
+        //compare with every ground truth position
+        for (int j = 0; j < groundTruth.size(); j++) {
+
+            //calculate Euclidean distance
+            float distance = norm(tablePositions[i] - groundTruth[j]);
+
+            //only consider positions within tolerance
+            if (distance <= MATCH_TOLERANCE) {
+                possibleMatches.push_back(make_tuple(distance, i, j));
+            }
+        }
+    }
+
 
     //unmatched balls as fn
+    //sort possible matches by distance (smallest first)
+    sort(possibleMatches.begin(), possibleMatches.end());
 
-    //eval metrics
-    
+    //track which predicted balls have been matched
+    vector<bool> predictedMatched(tablePositions.size(), false);
 
-    //output:
-        //gt balls with matching prediction
-        //missing balls
-        //how far predictions is from gt
-        //precision, recall, f1
+    //record position errors
+    vector<float> positionErrors;
+
+    //match closest pairs
+    for (const auto& match : possibleMatches) {
+
+        float distance = get<0>(match);
+        int i = get<1>(match); //predicted ball index
+        int j = get<2>(match); //ground truth ball index
+
+        //only match if neither ball has already been used
+        if (!predictedMatched[i] && !matched[j]) {
+
+            predictedMatched[i] = true;
+            matched[j] = true;
+
+            TP++;
+            positionErrors.push_back(distance);
+        }
+    }
+    FP = static_cast<int>(tablePositions.size()) - TP;
+    FN = static_cast<int>(groundTruth.size()) - TP;
+
+    //metrics
+    float precision = 0.0f;
+    float recall = 0.0f;
+    float F1 = 0.0f;
+
+    if (TP + FP > 0) {
+        precision = static_cast<float>(TP) / (TP + FP);
+    }
+
+    if (TP + FN > 0) {
+        recall = static_cast<float>(TP) / (TP + FN);
+    }
+
+    if (precision + recall > 0) {
+        F1 = 2 * precision * recall / (precision + recall);
+    }
+
+    //mean position error
+    float meanError = 0.0f;
+
+    for (float error : positionErrors) {
+        meanError += error;
+    }
+
+    if (!positionErrors.empty()) {
+        meanError /= positionErrors.size();
+    }
+
+    //print results
+    cout << "\nDETECTION EVALUATION\n";
+    cout << "TP: " << TP << endl;
+    cout << "FP: " << FP << endl;
+    cout << "FN: " << FN << endl;
+    cout << "Precision: " << precision << endl;
+    cout << "Recall: " << recall << endl;
+    cout << "F1: " << F1 << endl;
+    cout << "Mean position error: " << meanError << " pixels" << endl;
 
 }
 	
