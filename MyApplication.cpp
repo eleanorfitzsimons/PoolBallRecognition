@@ -141,6 +141,10 @@ vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
     return transformedPositions;
 }
 
+//adding correct ball position funciton to account for the fact the balls dont like ont he palnne
+//or could just justify paralax errors in report.. not knowign camera hiehgt
+
+
 int findBgHue(const Mat& hsv){
     //calculate hue histogram
     //2d hue saturation for robustness to lighting??????
@@ -301,7 +305,53 @@ void MyApplication() {
 	//filter potential balls
 	vector<Vec3f> ballPositions = filterBalls(potential, fgMask);
 
+    //get ball centres
+    vector<Point2f> ogPositions;
 
+    for (const Vec3f& ball : ballPositions) {
+        ogPositions.push_back(Point2f(ball[0], ball[1]));
+    }
+
+    //transform ball positions to table coords (x,y)
+    vector<Point2f> tablePositions = transformBallPosititions(ogPositions);
+    //transform image for checking ball positions
+    Point2f source_points[4] = {
+        Point2f(337.0f, 35.0f),
+        Point2f(1570.0f, 21.0f),
+        Point2f(38.0f, 472.0f),
+        Point2f(1888.0f, 451.0f)
+    };
+
+    Point2f destination_points[4] = {
+        Point2f(0.0f, 0.0f),
+        Point2f(1433.0f, 0.0f),
+        Point2f(0.0f, 682.0f),
+        Point2f(1433.0f, 682.0f)
+    };
+
+    Mat perspective_matrix =
+        getPerspectiveTransform(source_points, destination_points);
+
+    Mat transformed;
+    warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
+
+    //draw transformed ball centres
+    for (const Point2f& centre : tablePositions) {
+        circle(transformed, centre, 5, Scalar(0, 0, 255), FILLED);
+    }
+
+    imwrite("transformed_result.png", transformed);
+    //print and compare to ground truth
+    cout << "\ntransformed:\n";
+    cout << "Ball\tRow\tColumn\n";
+
+    for (int i = 0; i < tablePositions.size(); i++){
+        cout << i +1 << "\t\t"
+            << cvRound(tablePositions[i].y) << "\t"
+            << cvRound(tablePositions[i].x) <<endl;
+    }
+
+    
     //check raw Hough detections
     Mat houghResult = original.clone();
 
