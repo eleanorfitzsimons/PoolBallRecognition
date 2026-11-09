@@ -372,11 +372,15 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, int radius, const Mat& refe
 
     const float* ranges[] = {hueRange, satRange};
 
+    //convert HSV to float to preserve small back projection scores
+    Mat hsvFloat;
+    hsv.convertTo(hsvFloat, CV_32F);
+
     //back project reference histogram onto test image
     Mat backProjection;
 
     calcBackProject(
-        &hsv,
+        &hsvFloat,
         1,
         channels,
         referenceHist,
