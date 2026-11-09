@@ -271,18 +271,42 @@ Mat segmentTable(const Mat& original) {
 
     return fgMask;
 }
-/*
+
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
 
-
-int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
+//colour histogram from one ball
+Mat extractBallHist(){
 
 }
-//
+//train model
+vector<Mat> trainBallRecognition(){};
 
-*/
+//score with bakc proj
+float scoreBallMatch(){};
+
+int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
+    
+    //train
+        //take all balls training image
+
+        //perspective transform
+
+        //use lableled ball pos to build histogram
+
+    //rec
+        //detect balls and transform images
+
+        //back project reference hsitograms onto detected ballregions
+
+        //predict ball ientiy
+
+}
+
+
+
+
 ///////////////////////////////////
 // EVAL
 //////////////////////////////////
@@ -575,3 +599,4 @@ int main() {
 
 //the transformation not being perfect, criticise gt
 //for the mask nexct is to maybe reduce the area we are histogramming
+//mask needs to be changed for saturation
