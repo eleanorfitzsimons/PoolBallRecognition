@@ -109,10 +109,10 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
     return validBalls;
 }
 
-vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
-    //perspective transform
 
-    //define source and destination points
+//calculate perspective transformation matrix
+Mat getTablePerspectiveMatrix() {
+
     Point2f source_points[4] = {
         Point2f(337.0f, 35.0f),
         Point2f(1570.0f, 21.0f),
@@ -127,9 +127,15 @@ vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
         Point2f(1433.0f, 682.0f)
     };
 
+    return getPerspectiveTransform(source_points, destination_points);
+}
+
+vector<Point2f> transformBallPosititions(const vector<Point2f>& ogPositions) {
+    //perspective transform
+
+
     //calculate transform matrix
-    Mat perspective_matrix =
-        getPerspectiveTransform(source_points, destination_points);
+    Mat perspective_matrix = getTablePerspectiveMatrix();
 
     //apply transform to ball positions
     vector<Point2f> transformedPositions;
@@ -318,7 +324,40 @@ Mat extractBallHist(const Mat& hsv, Point2f centre, int radius){
 
 }
 //train model
-vector<Mat> trainBallRecognition(){};
+vector<Mat> trainBallRecognition(){
+    //load the training image
+    Mat trainingImage = imread("Pool/AllBalls.jpeg");
+
+    if (trainingImage.empty()) {
+        cout << "Could not load training image" << endl;
+        return {};
+    }
+
+    //load labelled positions from csv
+     vector<Point2f> referencePositions = loadGroundTruth("AllBalls.jpeg");
+
+     //perspective transform on training image
+     //.......
+     Mat perspective_matrix = getTablePerspectiveMatrix();
+
+     Mat transformed;
+     warpPerspective(trainingImage, transformed, perspective_matrix, Size(1434,683));
+
+     //convert to hsv
+     Mat hsv;
+     cvtColor(transformed, hsv, COLOR_BGR2HSV);
+
+     //histogram for each labeled ball
+     vector <Mat> referenceHistograms;
+     const int BALL_RADIUS = 14; /////TUNE?????
+     for (const Point2f & centre : referencePositions){
+        Mat hist = extractBallHist(hsv, centre, BALL_RADIUS);
+        referenceHistograms.push_back(hist);
+     }
+
+     return referenceHistograms;
+
+};
 
 //score with bakc proj
 float scoreBallMatch(){};
@@ -545,22 +584,8 @@ void MyApplication() {
     //transform ball positions to table coords (x,y)
     vector<Point2f> tablePositions = transformBallPosititions(ogPositions);
     //transform image for checking ball positions
-    Point2f source_points[4] = {
-        Point2f(337.0f, 35.0f),
-        Point2f(1570.0f, 21.0f),
-        Point2f(38.0f, 472.0f),
-        Point2f(1888.0f, 451.0f)
-    };
 
-    Point2f destination_points[4] = {
-        Point2f(0.0f, 0.0f),
-        Point2f(1433.0f, 0.0f),
-        Point2f(0.0f, 682.0f),
-        Point2f(1433.0f, 682.0f)
-    };
-
-    Mat perspective_matrix =
-        getPerspectiveTransform(source_points, destination_points);
+    Mat perspective_matrix = getTablePerspectiveMatrix();
 
     Mat transformed;
     warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
