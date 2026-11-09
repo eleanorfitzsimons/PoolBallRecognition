@@ -62,14 +62,15 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
         Point2f centre(ball[0], ball[1]);
         int radius = cvRound(ball[2]);
 
-        double inside = pointPolygonTest(
+        //from centre to table boundary
+        double distance = pointPolygonTest(
             tableCorners,
             centre,
-            false
+            true
         );
 
-        //skip balls outside table
-        if (inside < 0) {
+        //ignore balls too close to table edges
+        if (distance < 0.75 * radius) {
             continue;
         }
 
@@ -253,7 +254,7 @@ void evalRecognition() {}
 void MyApplication() {
 	
 	//load images
-	Mat original = imread("Table1.jpeg"); //ok fix this here for all
+	Mat original = imread("Pool/Table1.jpeg"); //ok fix this here for all
 
 	if(original.empty()) {
 		cout << "Could not open or find the image" << endl;
@@ -269,8 +270,21 @@ void MyApplication() {
 
 	//filter potential balls
 	vector<Vec3f> ballPositions = filterBalls(potential, fgMask);
-	
-	
+    //draw detected ball positions
+    Mat filtered = original.clone();
+
+    for (const Vec3f& ball : ballPositions) {
+        Point centre(cvRound(ball[0]), cvRound(ball[1]));
+        circle(filtered, centre, 5, Scalar(0, 0, 255), FILLED);
+    }
+
+    //save results
+    imwrite("filtered_result.png", filtered);
+    imwrite("foreground_mask.png", fgMask);
+
+    cout << "Hough candidates: " << potential.size() << endl;
+    cout << "Filtered candidates: " << ballPositions.size() << endl;
+        
 
 	//reconginse balls
 	
@@ -278,7 +292,7 @@ void MyApplication() {
 	
 	//imshow("Original Image", original);
 	//imshow("Transformed Image", transformed);
-	waitKey(0); //keep window open  
+	//waitKey(0); //keep window open  
 }
 
 int main() {
