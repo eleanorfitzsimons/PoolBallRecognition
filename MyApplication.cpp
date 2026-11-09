@@ -5,6 +5,9 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <string>
 
 using namespace cv;
 using namespace std;
@@ -150,6 +153,18 @@ int findBgHue(const Mat& hsv){
     //calculate hue histogram
     //2d hue saturation for robustness to lighting??????
 
+    //mask for pixels inside table polygon
+    vector<Point> tableCorners = {
+        Point(337, 35),
+        Point(1570, 21),
+        Point(1888, 451),
+        Point(38, 472)
+    };
+
+    Mat tableMask = Mat::zeros(hsv.size(), CV_8UC1);
+    fillConvexPoly(tableMask, tableCorners, Scalar(255));
+
+
     //histogram parameters
     int histSize = 30;                            //bins (each being 6)
     float hueRange[] = {0, 180};                  //values covered by hist
@@ -162,7 +177,7 @@ int findBgHue(const Mat& hsv){
         &hsv,       //input
         1,          //no of images
         channels,   //channel - 0 is hue
-        Mat(),      //no mask, using all px ????????????? could change???
+        tableMask,      //no mask, using all px ????????????? could change???
         hueHist,    //output
         1,          //dimensions
         &histSize,  //num bins
@@ -271,6 +286,61 @@ int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
 ///////////////////////////////////
 // EVAL
 //////////////////////////////////
+
+//load ground truth from csv file
+vector<Point2f> loadGroundTruth(const string& imageName) {
+
+    vector<Point2f> groundTruth;
+
+    //open csv file
+    ifstream file("Ball Locations In Transformed Image (Second correction).csv");
+
+    if (!file.is_open()) {
+        cout << "Could not open ground truth file" << endl;
+        return groundTruth;
+    }
+
+    //skip two header rows
+    string line;
+    getline(file, line);
+    getline(file, line);
+    //find row for the selected image
+    while (getline(file, line)) {
+
+        stringstream ss(line);
+        string imageNameCSV;
+
+        //read image filename
+        getline(ss, imageNameCSV, ',');
+
+        if (imageNameCSV != imageName) {
+            continue;
+        }
+
+        //read ball positions (1-15 and white)
+        for (int i = 0; i < 16; i++) {
+
+            string row, column;
+
+            getline(ss, row, ',');
+            getline(ss, column, ',');
+
+            //skip balls with missing positions
+            if (row.empty() || column.empty()) {
+                continue;
+            }
+
+            //OpenCV uses (x,y) = (column,row)
+            groundTruth.push_back(
+                Point2f(stof(column), stof(row))
+            );
+        }
+
+        break; //found the correct image
+    }
+
+    return groundTruth;
+}
 
 //predicted positions vs gt
 void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
@@ -482,6 +552,16 @@ void MyApplication() {
 	//reconginse balls
 	
 	//evaluate results
+    //load ground truth positions from csv
+    vector<Point2f> groundTruth = loadGroundTruth("Table1.jpeg");
+
+    //evaluate detection
+    if (!groundTruth.empty()) {
+        evalDetection(tablePositions, groundTruth);
+    }
+    else {
+        cout << "Skipping evaluation: no ground truth loaded" << endl;
+    }
 	
 	//imshow("Original Image", original);
 	//imshow("Transformed Image", transformed);
