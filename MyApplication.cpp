@@ -285,15 +285,19 @@ vector<Point2f> loadGroundTruth(const string& imageName);//forward declaration, 
 
 
 //colour histogram from one ball
-Mat extractBallHist(const Mat& hsv, Point2f centre, int radius){
+Mat extractBallHist(const Mat& hsv, Point2f centre, Size axes){
     //circuilar mask for ball
     Mat ballMask = Mat::zeros(hsv.size(), CV_8UC1);
 
 
-    circle(
+    //elliptical mask for transformed ball
+    ellipse(
         ballMask,
         centre,
-        radius,
+        axes,
+        0,
+        0,
+        360,
         Scalar(255),
         FILLED
     );
@@ -350,10 +354,13 @@ vector<Mat> trainBallRecognition(){
     for (int i = 0; i < referencePositions.size(); i++) {
 
         //draw sampling area around each training ball
-        circle(
+        ellipse(
             trainingResult,
             referencePositions[i],
-            14,
+            Size(16, 30),
+            0,
+            0,
+            360,
             Scalar(0, 0, 255),
             1
         );
@@ -379,10 +386,10 @@ vector<Mat> trainBallRecognition(){
 
     //histogram for each labeled ball
     vector <Mat> referenceHistograms;
-    const int BALL_RADIUS = 18; /////TUNE?????
+    const Size BALL_AXES(16, 30); //TUNE
     for (const Point2f & centre : referencePositions){
-    Mat hist = extractBallHist(hsv, centre, BALL_RADIUS);
-    referenceHistograms.push_back(hist);
+        Mat hist = extractBallHist(hsv, centre, BALL_AXES);
+        referenceHistograms.push_back(hist);
     }
 
     return referenceHistograms;
@@ -390,7 +397,7 @@ vector<Mat> trainBallRecognition(){
 };
 
 //score with bakc proj
-float scoreBallMatch(const Mat& hsv, Point2f centre, int radius, const Mat& referenceHist){
+float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& referenceHist){
 
     //histogram parameters - same channels and ranges as training
     int channels[] = {0, 1};
@@ -421,10 +428,14 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, int radius, const Mat& refe
     //create circular mask around detected ball
     Mat ballMask = Mat::zeros(hsv.size(), CV_8UC1);
 
-    circle(
+    //elliptical mask around detected ball
+    ellipse(
         ballMask,
         centre,
-        radius,
+        axes,
+        0,
+        0,
+        360,
         Scalar(255),
         FILLED
     );
@@ -446,7 +457,7 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
     Mat hsv;
     cvtColor(transformed, hsv, COLOR_BGR2HSV);
 
-    const int BALL_RADIUS = 18; //TUNE - same as training
+    const Size BALL_AXES(16, 30);
 
 
     //recognise each detected ball
@@ -461,7 +472,7 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
             float score = scoreBallMatch(
                 hsv,
                 centre,
-                BALL_RADIUS,
+                BALL_AXES,
                 referenceHistogram[i]
             );
 
