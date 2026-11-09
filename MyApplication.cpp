@@ -281,6 +281,8 @@ Mat segmentTable(const Mat& original) {
 ////////////////////////////////////
 // STAGE 2: Recognising the balls
 ////////////////////////////////////
+vector<Point2f> loadGroundTruth(const string& imageName);//forward declaration, these might need to be reordered
+
 
 //colour histogram from one ball
 Mat extractBallHist(const Mat& hsv, Point2f centre, int radius){
@@ -360,32 +362,98 @@ vector<Mat> trainBallRecognition(){
 };
 
 //score with bakc proj
-float scoreBallMatch(){};
+float scoreBallMatch(const Mat& hsv, Point2f centre, int radius, const Mat& referenceHist){
 
-int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
+    //histogram parameters - same channels and ranges as training
+    int channels[] = {0, 1};
+
+    float hueRange[] = {0, 180};
+    float satRange[] = {0, 256};
+
+    const float* ranges[] = {hueRange, satRange};
+
+    //back project reference histogram onto test image
+    Mat backProjection;
+
+    calcBackProject(
+        &hsv,
+        1,
+        channels,
+        referenceHist,
+        backProjection,
+        ranges,
+        1.0,
+        true
+    );
+
+    //create circular mask around detected ball
+    Mat ballMask = Mat::zeros(hsv.size(), CV_8UC1);
+
+    circle(
+        ballMask,
+        centre,
+        radius,
+        Scalar(255),
+        FILLED
+    );
+
+    //average back-projection response inside ball
+    float score = static_cast<float>(
+        mean(backProjection, ballMask)[0]
+    );
+
+    return score;
+};
+
+vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram ) {
     
-    //train
-        //take all balls training image
 
-        //perspective transform
+     vector<int> predictedBalls;
 
-        //use lableled ball pos to build histogram
+    //convert transformed image to HSV
+    Mat hsv;
+    cvtColor(transformed, hsv, COLOR_BGR2HSV);
 
-    //rec
-        //detect balls and transform images
+    const int BALL_RADIUS = 14; //TUNE - same as training
 
-        //back project reference hsitograms onto detected ballregions
 
-        //predict ball ientiy
+    //recognise each detected ball
+    for (const Point2f& centre : ballPositions) {
 
+        float bestScore = -1.0f;
+        int bestBall = -1;
+
+        //compare against all reference histograms
+        for (int i = 0; i < referenceHistogram.size(); i++) {
+
+            float score = scoreBallMatch(
+                hsv,
+                centre,
+                BALL_RADIUS,
+                referenceHistogram[i]
+            );
+
+            if (score > bestScore) {
+                bestScore = score;
+
+                //reference order: balls 1-15, then white
+                bestBall = (i == 15) ? 0 : i + 1;
+            }
+        }
+
+        predictedBalls.push_back(bestBall);
+    }
+
+    return predictedBalls;
 }
 
 
 
 
-///////////////////////////////////
+
+////////////////////////////////////////
 // EVAL
-//////////////////////////////////
+////////////////////////////////////////
 
 //load ground truth from csv file
 vector<Point2f> loadGroundTruth(const string& imageName) {
@@ -583,30 +651,33 @@ void MyApplication() {
 
     //transform ball positions to table coords (x,y)
     vector<Point2f> tablePositions = transformBallPosititions(ogPositions);
-    //transform image for checking ball positions
 
+    //transform image for checking ball positions
     Mat perspective_matrix = getTablePerspectiveMatrix();
 
     Mat transformed;
     warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
 
+ //make a copy for drawing so recognition uses the clean image
+    Mat transformedResult = transformed.clone();
+
     //draw transformed ball centres
     for (const Point2f& centre : tablePositions) {
-        circle(transformed, centre, 5, Scalar(0, 0, 255), FILLED);
+        circle(transformedResult, centre, 5, Scalar(0, 0, 255), FILLED);
     }
 
-    imwrite("transformed_result.png", transformed);
+    imwrite("transformed_result.png", transformedResult);
+
     //print and compare to ground truth
     cout << "\ntransformed:\n";
-    cout << "Ball\tRow\tColumn\n";
+    cout << "Candidate\tRow\tColumn\n";
 
-    for (int i = 0; i < tablePositions.size(); i++){
-        cout << i +1 << "\t\t"
-            << cvRound(tablePositions[i].y) << "\t"
-            << cvRound(tablePositions[i].x) <<endl;
+    for (int i = 0; i < tablePositions.size(); i++) {
+        cout << i + 1 << "\t\t"
+             << cvRound(tablePositions[i].y) << "\t"
+             << cvRound(tablePositions[i].x) << endl;
     }
 
-    
     //check raw Hough detections
     Mat houghResult = original.clone();
 
@@ -633,11 +704,28 @@ void MyApplication() {
 
     cout << "Hough candidates: " << potential.size() << endl;
     cout << "Filtered candidates: " << ballPositions.size() << endl;
-        
 
-	//reconginse balls
-	
-	//evaluate results
+
+    //reconginse balls
+
+    //train using AllBalls.jpeg
+    vector<Mat> referenceHistograms = trainBallRecognition();
+
+    //recognise detected balls using back projection
+    vector<int> predictedBalls =
+        recogniseBalls(transformed, tablePositions, referenceHistograms);
+
+    //print recognised ball identities
+    cout << "\nRECOGNITION RESULTS\n";
+
+    for (int i = 0; i < predictedBalls.size(); i++) {
+        cout << "Candidate " << i + 1
+             << ": Ball " << predictedBalls[i] << endl;
+    }
+
+
+    //evaluate results
+
     //load ground truth positions from csv
     vector<Point2f> groundTruth = loadGroundTruth("Table1.jpeg");
 
@@ -648,10 +736,10 @@ void MyApplication() {
     else {
         cout << "Skipping evaluation: no ground truth loaded" << endl;
     }
-	
-	//imshow("Original Image", original);
-	//imshow("Transformed Image", transformed);
-	//waitKey(0); //keep window open  
+
+    //imshow("Original Image", original);
+    //imshow("Transformed Image", transformed);
+    //waitKey(0); //keep window open
 }
 
 int main() {
