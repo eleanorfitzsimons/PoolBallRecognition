@@ -336,28 +336,56 @@ vector<Mat> trainBallRecognition(){
     }
 
     //load labelled positions from csv
-     vector<Point2f> referencePositions = loadGroundTruth("AllBalls.jpeg");
+    vector<Point2f> referencePositions = loadGroundTruth("AllBalls.jpeg");
 
-     //perspective transform on training image
-     //.......
-     Mat perspective_matrix = getTablePerspectiveMatrix();
+    //perspective transform on training image
+    //.......
+    Mat perspective_matrix = getTablePerspectiveMatrix();
 
-     Mat transformed;
-     warpPerspective(trainingImage, transformed, perspective_matrix, Size(1434,683));
+    Mat transformed;
+    warpPerspective(trainingImage, transformed, perspective_matrix, Size(1434,683));
+    //check labelled training ball positions
+    Mat trainingResult = transformed.clone();
 
-     //convert to hsv
-     Mat hsv;
-     cvtColor(transformed, hsv, COLOR_BGR2HSV);
+    for (int i = 0; i < referencePositions.size(); i++) {
 
-     //histogram for each labeled ball
-     vector <Mat> referenceHistograms;
-     const int BALL_RADIUS = 14; /////TUNE?????
-     for (const Point2f & centre : referencePositions){
-        Mat hist = extractBallHist(hsv, centre, BALL_RADIUS);
-        referenceHistograms.push_back(hist);
-     }
+        //draw sampling area around each training ball
+        circle(
+            trainingResult,
+            referencePositions[i],
+            14,
+            Scalar(0, 0, 255),
+            1
+        );
 
-     return referenceHistograms;
+        //label reference ball
+        string label = (i == 15) ? "W" : to_string(i + 1);
+
+        putText(
+            trainingResult,
+            label,
+            referencePositions[i] + Point2f(-8, -18),
+            FONT_HERSHEY_SIMPLEX,
+            0.4,
+            Scalar(255, 255, 255),
+            1
+        );
+    }
+
+    imwrite("training_samples.png", trainingResult);
+    //convert to hsv
+    Mat hsv;
+    cvtColor(transformed, hsv, COLOR_BGR2HSV);
+
+    //histogram for each labeled ball
+    vector <Mat> referenceHistograms;
+    const int BALL_RADIUS = 18; /////TUNE?????
+    for (const Point2f & centre : referencePositions){
+    Mat hist = extractBallHist(hsv, centre, BALL_RADIUS);
+    referenceHistograms.push_back(hist);
+    }
+
+    return referenceHistograms;
 
 };
 
@@ -412,13 +440,13 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, int radius, const Mat& refe
 vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram ) {
     
 
-     vector<int> predictedBalls;
+    vector<int> predictedBalls;
 
     //convert transformed image to HSV
     Mat hsv;
     cvtColor(transformed, hsv, COLOR_BGR2HSV);
 
-    const int BALL_RADIUS = 14; //TUNE - same as training
+    const int BALL_RADIUS = 18; //TUNE - same as training
 
 
     //recognise each detected ball
