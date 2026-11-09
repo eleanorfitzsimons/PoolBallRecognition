@@ -266,22 +266,46 @@ int recogniseBalls(Mat transformed, vector<Point2f> ballPositions) {
 }
 //
 
-
+*/
 ///////////////////////////////////
 // EVAL
 //////////////////////////////////
 
 //predicted positions vs gt
-void evalDetection() {}
+void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
+    //max distance for correct match
+
+    //loop through predicted ball positions
+        //dist to gt pos
+        //closest gt that hasnt already been matched
+        //if w/i th 
+            //tp
+            //record error
+            //gt ball matched
+        // else 
+            //fp
+
+    //unmatched balls as fn
+
+    //eval metrics
+    
+
+    //output:
+        //gt balls with matching prediction
+        //missing balls
+        //how far predictions is from gt
+        //precision, recall, f1
+
+}
 	
 
 //predicted balls vs gt
-void evalRecognition() {}
+//void evalRecognition() {}
 
 
 
 
-*/
+
 
 
 
