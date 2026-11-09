@@ -37,7 +37,7 @@ vector<Vec3f> findBalls(const Mat& original) {
 		1, //dp accymulator resolution
 		30, //min distance between circles
 		100, //param1: higher threshold for Canny edge detector  
-		10, //param2: threshold for center detection
+		8, //param2: threshold for center detection
 		15, //min radius
 		28 //max radius
 	);
@@ -183,24 +183,25 @@ int findBgHue(const Mat& hsv){
 
     return bgHue;
 }
-Mat segmentTable(const Mat & original){
 
-	//mean shift
+Mat segmentTable(const Mat& original) {
+
+    //mean shift
     Mat filtered;
     pyrMeanShiftFiltering(original, filtered, 10, 20, 1);
 
-	//hsv
-	Mat hsv;
+    //hsv
+    Mat hsv;
     cvtColor(filtered, hsv, COLOR_BGR2HSV);
 
-	//bg hue fn (uses hist)
-	int bgHue = findBgHue(hsv);
+    //bg hue fn (uses hist)
+    int bgHue = findBgHue(hsv);
 
-	//binary bg mask
-	const int HUE_TOLERANCE = 12;
-    Mat bgMask = Mat::zeros(hsv.size(), CV_8UC1);
+    //find average saturation of cloth-like pixels
+    const int HUE_TOLERANCE = 12; //TUNE
 
-	
+    Mat hueMask = Mat::zeros(hsv.size(), CV_8UC1);
+
     for (int y = 0; y < hsv.rows; y++) {
         for (int x = 0; x < hsv.cols; x++) {
 
@@ -210,13 +211,42 @@ Mat segmentTable(const Mat & original){
             difference = min(difference, 180 - difference);
 
             if (difference <= HUE_TOLERANCE) {
+                hueMask.at<uchar>(y, x) = 255;
+            }
+        }
+    }
+
+    Mat channels[3];
+    split(hsv, channels);
+
+    double bgSat = mean(channels[1], hueMask)[0];
+
+    //binary bg mask
+    const int SAT_TOLERANCE = 30; //TUNE
+    Mat bgMask = Mat::zeros(hsv.size(), CV_8UC1);
+
+    for (int y = 0; y < hsv.rows; y++) {
+        for (int x = 0; x < hsv.cols; x++) {
+
+            Vec3b pixel = hsv.at<Vec3b>(y, x);
+
+            int hue = pixel[0];
+            int saturation = pixel[1];
+
+            int difference = abs(hue - bgHue);
+            difference = min(difference, 180 - difference);
+
+            //classify as cloth if hue AND saturation are similar
+            if (difference <= HUE_TOLERANCE &&
+                abs(saturation - bgSat) <= SAT_TOLERANCE) {
+
                 bgMask.at<uchar>(y, x) = 255;
             }
         }
     }
 
-	//invert
-	Mat fgMask;
+    //invert
+    Mat fgMask;
     bitwise_not(bgMask, fgMask);
 
     return fgMask;
@@ -270,6 +300,20 @@ void MyApplication() {
 
 	//filter potential balls
 	vector<Vec3f> ballPositions = filterBalls(potential, fgMask);
+
+
+    //check raw Hough detections
+    Mat houghResult = original.clone();
+
+    for (const Vec3f& ball : potential) {
+
+        Point centre(cvRound(ball[0]), cvRound(ball[1]));
+
+        circle(houghResult, centre, 5, Scalar(0, 0, 255), FILLED);
+    }
+
+    imwrite("hough_result.png", houghResult);
+
     //draw detected ball positions
     Mat filtered = original.clone();
 
@@ -301,3 +345,4 @@ int main() {
 }
 
 //the transformation not being perfect, criticise gt
+//for the mask nexct is to maybe reduce the area we are histogramming
