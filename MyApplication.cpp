@@ -137,9 +137,26 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
     vector<Vec3f> weakCircles;
     HoughCircles(blurred, weakCircles, HOUGH_GRADIENT,
                  1, 30, 100, 7, 15, 28); //lower threshold 7 so more possible circles are found
+        //go through the new possible circles
+    for (const Vec3f& ball : weakCircles) {
 
+        Point2f centre(ball[0], ball[1]);
+        float radius = ball[2];
 
+        //check if this ball has already been found
+        bool duplicate = false;
+        for (const Vec3f& oldBall : result){
+            //compare distance between centres
+            if(norm(centre - Point2f(oldBall[0], oldBall[1]))< 24.0f ){
 
+            }
+        }
+        //skip if ball is already on the list
+        if(duplicate) 
+            continue;
+        if (pointPolygonTest(TABLE_CORNERS, centre, true) < 0.6f * radius)
+            continue;
+    }
     return result;
 }
 
