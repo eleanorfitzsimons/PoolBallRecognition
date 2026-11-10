@@ -120,6 +120,28 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
     return validBalls;
 }
 
+//dark ball recovery
+//second go at hough to find the ones we missed
+vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepted, const Mat& fgMask){
+    //keep the balls we already have           
+    vector<Vec3f> result = accepted;
+
+    //convert to gs for circles
+    Mat gray, blurred, edges, hsv;
+    cvtColor(original, gray, COLOR_BGR2GRAY);
+    GaussianBlur(gray, blurred, Size(5, 5), 1.5); //blur to reduce noise
+    Canny(gray, edges, 70, 140); 
+    cvtColor(original, hsv, COLOR_BGR2HSV); //for checking brightnes
+
+    //second hough with lower threshold
+    vector<Vec3f> weakCircles;
+    HoughCircles(blurred, weakCircles, HOUGH_GRADIENT,
+                 1, 30, 100, 7, 15, 28); //lower threshold 7 so more possible circles are found
+
+
+
+    return result;
+}
 
 //calculate perspective transformation matrix
 Mat getTablePerspectiveMatrix() {
@@ -349,6 +371,7 @@ vector<Mat> trainBallRecognition(){
     //load the training image
     Mat trainingImage = imread("Pool/AllBalls.jpeg");
 
+
     if (trainingImage.empty()) {
         cout << "Could not load training image" << endl;
         return {};
@@ -356,7 +379,12 @@ vector<Mat> trainBallRecognition(){
 
     //load labelled positions from csv
     vector<Point2f> referencePositions = loadGroundTruth("AllBalls.jpeg");
-
+    //safety
+    if (referencePositions.size() != 16) {
+        cout << "Expected 16 training positions; found "
+            << referencePositions.size() << endl;
+        return {};
+    }
     //perspective transform on training image
     //.......
     Mat perspective_matrix = getTablePerspectiveMatrix();
