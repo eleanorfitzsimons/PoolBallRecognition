@@ -721,9 +721,10 @@ vector<Point2f> loadGroundTruth(const string& imageName) {
 
     return groundTruth;
 }
-
+vector<pair<int, Point2f>> loadGroundTruthLabels(const string& imageName) {
+}
 //predicted positions vs gt
-vector<int> evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
+vector<int> evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth, const vector<int> & groundTruthLabels) {
     //max distance for correct match
     const float MATCH_TOLERANCE = 15; ////TUNEEE
 
@@ -778,7 +779,7 @@ vector<int> evalDetection(const vector<Point2f> & tablePositions, const vector<P
             predictedMatched[i] = true;
             matched[j] = true;
 
-            trueLabels[i] = (j == 15) ? 0 : j + 1;
+            trueLabels[i] = groundTruthLabels[j];
 
             TP++;
             positionErrors.push_back(distance);
@@ -982,13 +983,24 @@ void MyApplication() {
 
     //evaluate detection
     if (!groundTruth.empty()) {
-        vector<int> trueLabels = evalDetection(tablePositions, groundTruth);
-        //diagnostic: true identity of each candidate (-1 = false positive)
-        for (int i = 0; i < trueLabels.size(); i++) {
-            cout << "Candidate " << i + 1 << " true ball " << trueLabels[i] << endl;
+
+        //load ground truth positions with the correct ball labels
+        vector<pair<int, Point2f>> labelledGT =  loadGroundTruthLabels("Table1.jpeg");
+
+        //get the ball numbers for evaluation
+        vector<int> labels;
+
+        for (const auto& item : labelledGT) {
+            labels.push_back(item.first);
         }
 
+        //evaluate detected positions against ground truth
+        vector<int> trueLabels =
+            evalDetection(tablePositions, groundTruth, labels);
+
+        //evaluate predicted ball identities
         evalRecognition(predictedBalls, trueLabels);
+
     }
     
     else {
