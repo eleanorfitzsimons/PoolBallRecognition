@@ -951,17 +951,36 @@ void evalRecognition(const vector<int>& predicted, const vector<int>& trueLabels
 
 
 void MyApplication() {
-	
-	//load images
-	Mat original = imread("Pool/Table1.jpeg"); //ok fix this here for all
 
-	if(original.empty()) {
-		cout << "Could not open or find the image" << endl;
-		return;
+    //train once using AllBalls.jpeg
+    vector<float> referenceDarkFractions;
+    vector<Mat> referenceHistograms =
+        trainBallRecognition(referenceDarkFractions);
 
-	}
+    //check all 16 training balls loaded
+    if (referenceHistograms.size() != 16 ||
+        referenceDarkFractions.size() != 16) {
 
-	//detect balls
+        cout << "Skipping recognition: incomplete training data" << endl;
+        return;
+    }
+    //test Tables 1 to 6
+    for (int imageNumber = 1; imageNumber <= 6; ++imageNumber) {
+
+        string imageName = "Table" + to_string(imageNumber) + ".jpeg";
+
+        cout << "\n========== " << imageName << " ==========\n";
+
+        //load current table image
+        Mat original = imread("Pool/" + imageName);
+
+        if (original.empty()) {
+            cout << "Could not open or find " << imageName << endl;
+            continue;
+        }
+
+
+	//detect possible circles
 	vector<Vec3f> potential = findBalls(original);
 
 	//segment table
@@ -986,116 +1005,92 @@ void MyApplication() {
     Mat perspective_matrix = getTablePerspectiveMatrix();
 
     Mat transformed;
-    warpPerspective(original, transformed, perspective_matrix, Size(1434, 683));
+    warpPerspective(original, transformed, perspective_matrix, WARP_SIZE);
 
- //make a copy for drawing so recognition uses the clean image
+    //recognise using trained histograms and dark fractions
+    vector<int> predictedBalls =  recogniseBalls(transformed, tablePositions, referenceHistograms, referenceDarkFractions);
+
+    //make a copy for drawing so recognition uses the clean image
     Mat transformedResult = transformed.clone();
 
     //draw transformed ball centres
-    for (const Point2f& centre : tablePositions) {
-        circle(transformedResult, centre, 5, Scalar(0, 0, 255), FILLED);
+     //draw positions and predicted ball numbers
+    for (size_t i = 0; i < tablePositions.size(); ++i) {
+
+        const Point2f& centre = tablePositions[i];
+
+        circle(transformedResult, centre, 4,
+            Scalar(0, 0, 255), FILLED);
+
+        //show white ball as W
+        string label = predictedBalls[i] == 0
+                    ? "W" : to_string(predictedBalls[i]);
+
+        putText(transformedResult, label,
+                centre + Point2f(5, -8),
+                FONT_HERSHEY_SIMPLEX, 0.45,
+                Scalar(255, 255, 255), 1);
     }
 
-    imwrite("transformed_result.png", transformedResult);
+    //use separate result files for each table
+    string prefix = "Table" + to_string(imageNumber) + "_";
 
-    //print and compare to ground truth
-    cout << "\ntransformed:\n";
-    cout << "Candidate\tRow\tColumn\n";
+    imwrite(prefix + "transformed_result.png", transformedResult);
 
-    for (int i = 0; i < tablePositions.size(); i++) {
-        cout << i + 1 << "\t\t"
-             << cvRound(tablePositions[i].y) << "\t"
-             << cvRound(tablePositions[i].x) << endl;
-    }
-
-    //check raw Hough detections
-    Mat houghResult = original.clone();
-
-    for (const Vec3f& ball : potential) {
-
-        Point centre(cvRound(ball[0]), cvRound(ball[1]));
-
-        circle(houghResult, centre, 5, Scalar(0, 0, 255), FILLED);
-    }
-
-    imwrite("hough_result.png", houghResult);
-
-    //draw detected ball positions
+    //draw detected circles on original image
     Mat filtered = original.clone();
 
     for (const Vec3f& ball : ballPositions) {
-        Point centre(cvRound(ball[0]), cvRound(ball[1]));
-        circle(filtered, centre, 5, Scalar(0, 0, 255), FILLED);
+
+        circle(filtered,
+            Point(cvRound(ball[0]), cvRound(ball[1])),
+            cvRound(ball[2]),
+            Scalar(0, 0, 255), 2);
     }
 
     //save results
-    imwrite("filtered_result.png", filtered);
-    imwrite("foreground_mask.png", fgMask);
+    imwrite(prefix + "filtered_result.png", filtered);
+    imwrite(prefix + "foreground_mask.png", fgMask);
 
+    //print detections and transformed positions
     cout << "Hough candidates: " << potential.size() << endl;
     cout << "Filtered candidates: " << ballPositions.size() << endl;
+    cout << "Candidate\tBall\tRow\tColumn\n";
 
+    for (size_t i = 0; i < tablePositions.size(); ++i) {
 
-    //reconginse balls
-
-    //train using AllBalls.jpeg
-    vector<float> referenceDarkFractions;
-    vector<Mat> referenceHistograms = trainBallRecognition(referenceDarkFractions);
-
-    //check all 16 training balls loaded
-    if (referenceHistograms.size() != 16 ||
-        referenceDarkFractions.size() != 16) {
-
-        cout << "Skipping recognition: incomplete training data" << endl;
-        return;
+    cout << i + 1 << "\t\t"
+        << predictedBalls[i] << "\t"
+        << cvRound(tablePositions[i].y) << "\t"
+        << cvRound(tablePositions[i].x) << endl;
     }
 
-    //recognise detected balls using back projection
-    vector<int> predictedBalls = recogniseBalls(transformed, tablePositions, referenceHistograms, referenceDarkFractions);
+    //load gt for this table
+    vector<pair<int, Point2f>> labelledGT = loadGroundTruthLabels(imageName);
 
-    //print recognised ball identities
-    cout << "\nRECOGNITION RESULTS\n";
+    if (!labelledGT.empty()) {
 
-    for (int i = 0; i < predictedBalls.size(); i++) {
-        cout << "Candidate " << i + 1
-             << ": Ball " << predictedBalls[i] << endl;
-    }
-
-
-    //evaluate results
-
-    //load ground truth positions from csv
-    vector<Point2f> groundTruth = loadGroundTruth("Table1.jpeg");
-
-    //evaluate detection
-    if (!groundTruth.empty()) {
-
-        //load ground truth positions with the correct ball labels
-        vector<pair<int, Point2f>> labelledGT =  loadGroundTruthLabels("Table1.jpeg");
-
-        //get the ball numbers for evaluation
+        vector<Point2f> groundTruth;
         vector<int> labels;
 
+        //split labels and positions
         for (const auto& item : labelledGT) {
             labels.push_back(item.first);
+            groundTruth.push_back(item.second);
         }
 
-        //evaluate detected positions against ground truth
-        vector<int> trueLabels =
-            evalDetection(tablePositions, groundTruth, labels);
-
-        //evaluate predicted ball identities
+        //evaluate detected positions
+        vector<int> trueLabels = evalDetection(tablePositions, groundTruth, labels);
+       
+        //evaluate predicted identities
         evalRecognition(predictedBalls, trueLabels);
 
-    }
-    
-    else {
-        cout << "Skipping evaluation: no ground truth loaded" << endl;
-    }
+    } else {
 
-    //imshow("Original Image", original);
-    //imshow("Transformed Image", transformed);
-    //waitKey(0); //keep window open
+        cout << "Skipping evaluation: no ground truth loaded for "
+            << imageName << endl;
+    }
+}
 }
 
 int main() {
