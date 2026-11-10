@@ -559,7 +559,7 @@ vector<Point2f> loadGroundTruth(const string& imageName) {
 }
 
 //predicted positions vs gt
-void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
+vector<int> evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth) {
     //max distance for correct match
     const float MATCH_TOLERANCE = 15; ////TUNEEE
 
@@ -570,6 +570,8 @@ void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f>
 
     //tracking whihc gt balls are matched
     vector<bool> matched(groundTruth.size(), false);
+    //true ball identity for each predicted position: 0 = white, 1-15 = numbered, -1 = false positive
+    vector<int> trueLabels(tablePositions.size(), -1);
 
     vector<tuple<float, int, int>> possibleMatches;
     //loop through predicted positions
@@ -611,6 +613,8 @@ void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f>
 
             predictedMatched[i] = true;
             matched[j] = true;
+
+            trueLabels[i] = (j == 15) ? 0 : j + 1;
 
             TP++;
             positionErrors.push_back(distance);
@@ -656,12 +660,45 @@ void evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f>
     cout << "Recall: " << recall << endl;
     cout << "F1: " << F1 << endl;
     cout << "Mean position error: " << meanError << " pixels" << endl;
-
+    
+    return trueLabels;
 }
 	
 
 //predicted balls vs gt
-//void evalRecognition() {}
+//index 0 = white ball, 1-15 = numbered balls
+void evalRecognition(const vector<int>& predicted, const vector<int>& trueLabels) {
+    Mat confusion = Mat::zeros(16, 16, CV_32S); //row = true ball, column = predicted ball
+    int correct = 0;
+    int total = 0;
+
+    for (size_t i = 0; i < predicted.size(); i++) {
+
+        //false positives have no true identity, and unrecognised balls can't be scored
+        if (trueLabels[i] < 0 || predicted[i] < 0) continue;
+
+        confusion.at<int>(trueLabels[i], predicted[i])++;
+        total++;
+
+        if (predicted[i] == trueLabels[i]) correct++;
+    }
+        cout << "\nRECOGNITION EVALUATION\n";
+    cout << "Correct: " << correct << " / " << total << endl;
+
+    if (total > 0) {
+        cout << "Accuracy: " << static_cast<float>(correct) / total << endl;
+    }
+
+    //print the confusion matrix
+    cout << "\nConfusion matrix (rows = true, columns = predicted, 0 = white)\n";
+
+    for (int r = 0; r < 16; r++) {
+        for (int c = 0; c < 16; c++) {
+            cout << confusion.at<int>(r, c) << "\t";
+        }
+        cout << endl;
+    }
+}
 
 
 
@@ -779,7 +816,8 @@ void MyApplication() {
 
     //evaluate detection
     if (!groundTruth.empty()) {
-        evalDetection(tablePositions, groundTruth);
+        vector<int> trueLabels = evalDetection(tablePositions, groundTruth);
+        evalRecognition(predictedBalls, trueLabels);
     }
     else {
         cout << "Skipping evaluation: no ground truth loaded" << endl;
