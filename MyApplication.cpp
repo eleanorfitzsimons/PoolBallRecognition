@@ -12,6 +12,23 @@
 using namespace cv;
 using namespace std;
 
+//////////////////////////////////
+// TABLE GEOMETRY 
+//////////////////////////////////
+
+//table corners in og image, order: top left, top right, bottom right, bottom left
+
+const vector<Point2f> TABLE_CORNERS = {
+    Point2f(337.0f, 35.0f),
+    Point2f(1570.0f, 21.0f),
+    Point2f(1888.0f, 451.0f),
+    Point2f(38.0f, 472.0f)
+};
+
+//size of the transf table image
+const float TABLE_W = 1433.0f;
+const float TABLE_H = 682.0f;
+const Size WARP_SIZE(1434, 683);
 
 //////////////////////////////////
 // STAGE 1: Dectecting the balls 
@@ -54,12 +71,6 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
     vector<Vec3f> validBalls;
 
     //FILTER INSIDE TABLE
-    vector<Point> tableCorners = {
-        Point(337, 35),
-        Point(1570, 21),
-        Point(1888, 451),
-        Point(38, 472)
-    };
 
     for (const Vec3f& ball : possible) {
 
@@ -68,7 +79,7 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
 
         //from centre to table boundary
         double distance = pointPolygonTest(
-            tableCorners,
+            TABLE_CORNERS,
             centre,
             true
         );
@@ -160,15 +171,9 @@ int findBgHue(const Mat& hsv){
     //2d hue saturation for robustness to lighting??????
 
     //mask for pixels inside table polygon
-    vector<Point> tableCorners = {
-        Point(337, 35),
-        Point(1570, 21),
-        Point(1888, 451),
-        Point(38, 472)
-    };
-
+   vector<Point> tablePoly(TABLE_CORNERS.begin(), TABLE_CORNERS.end());
     Mat tableMask = Mat::zeros(hsv.size(), CV_8UC1);
-    fillConvexPoly(tableMask, tableCorners, Scalar(255));
+    fillConvexPoly(tableMask, tablePoly, Scalar(255));
 
 
     //histogram parameters
@@ -793,3 +798,7 @@ int main() {
 //the transformation not being perfect, criticise gt
 //for the mask nexct is to maybe reduce the area we are histogramming
 //mask needs to be changed for saturation
+
+
+//striped vs solid
+//change 
