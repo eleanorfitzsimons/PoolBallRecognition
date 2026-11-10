@@ -229,7 +229,7 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
             continue;
         
         //diff betw surroundign cloth and ball brightness
-        double contrast = surroundBrightness / surroundCount = innerBrightness/ innerCount;
+        double contrast = surroundBrightness / surroundCount - innerBrightness/ innerCount;
         double edgeFraction = double(edgeCount) / edgePixels; // frac of px that are edges
         double foregroundFraction = double(foregroundCount) / diskCount;
 
@@ -890,6 +890,8 @@ void MyApplication() {
 
 	//filter potential balls
 	vector<Vec3f> ballPositions = filterBalls(potential, fgMask);
+    //second go to recover dark balls missed
+    ballPositions = recoverDarkBalls(original, ballPositions, fgMask);
 
     //get ball centres
     vector<Point2f> ogPositions;
