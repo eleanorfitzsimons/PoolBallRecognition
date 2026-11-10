@@ -85,7 +85,7 @@ vector<Vec3f> filterBalls(const vector<Vec3f>& possible, const Mat& fgMask) {
         );
 
         //ignore balls too close to table edges
-        if (distance < 0.75 * radius) {
+        if (distance < 0.6 * radius) {
             continue;
         }
 
