@@ -917,15 +917,24 @@ void evalRecognition(const vector<int>& predicted, const vector<int>& trueLabels
 
     for (size_t i = 0; i < predicted.size(); i++) {
 
-        //false positives have no true identity, and unrecognised balls can't be scored
-        if (trueLabels[i] < 0 || predicted[i] < 0) continue;
+    //skip false pos with no true identity
+    if (trueLabels[i] < 0)
+        continue;
 
+    //only add valid predictions to confusion matrix
+    if (predicted[i] >= 0 && predicted[i] <= 15) {
         confusion.at<int>(trueLabels[i], predicted[i])++;
-        total++;
-
-        if (predicted[i] == trueLabels[i]) correct++;
     }
-        cout << "\nRECOGNITION EVALUATION\n";
+
+    //count matched balls even if not recognised
+    total++;
+
+    //check if identity is correct
+    if (predicted[i] == trueLabels[i])
+        correct++;
+    }
+    
+    cout << "\nRECOGNITION EVALUATION\n";
     cout << "Correct: " << correct << " / " << total << endl;
 
     if (total > 0) {
