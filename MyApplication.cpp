@@ -721,7 +721,62 @@ vector<Point2f> loadGroundTruth(const string& imageName) {
 
     return groundTruth;
 }
+
+//load th gt with ball labels
 vector<pair<int, Point2f>> loadGroundTruthLabels(const string& imageName) {
+    vector<pair<int, Point2f>> labelled;
+
+    //open ground truth csv
+    ifstream file("Ball Locations In Transformed Image (Second correction).csv");
+
+
+    if (!file.is_open())
+        return labelled;
+
+    string line;
+
+    //skip first two rows
+    getline(file, line);
+    getline(file, line);
+
+    //find correct image
+    while (getline(file, line)) {
+
+        stringstream ss(line);
+        string filename;
+
+        getline(ss, filename, ',');
+
+        if (filename != imageName)
+            continue;
+
+        //read coordinates for each of the 16 balls
+        for (int i = 0; i < 16; ++i) {
+
+            string row, col;
+
+            getline(ss, row, ',');
+            getline(ss, col, ',');
+
+            //only include balls with coordinates
+            if (!row.empty() && !col.empty()) {
+
+                //white ball is 0, others are 1-15
+                int label = (i == 15) ? 0 : i + 1;
+
+                //store ball number with its position
+                labelled.push_back({
+                    label,
+                    Point2f(stof(col), stof(row))
+                });
+            }
+        }
+
+        break;
+    }
+
+    return labelled;
+
 }
 //predicted positions vs gt
 vector<int> evalDetection(const vector<Point2f> & tablePositions, const vector<Point2f> & groundTruth, const vector<int> & groundTruthLabels) {
