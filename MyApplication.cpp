@@ -471,9 +471,32 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
         float bestScore = -1.0f;
         int bestBall = -1;
 
-        //compare against all reference histograms
-        for (int i = 0; i < referenceHistogram.size(); i++) {
+        //ball type from px inside elipse
+        Mat mask = Mat::zeros(hsv.size(), CV_8UC1);
+        ellipse(mask, centre, BALL_AXES, 0, 0, 360, Scalar(255), FILLED);
 
+        Mat whitePix, darkPix;
+        inRange(hsv, Scalar(0, 0, 150), Scalar(180, 60, 255), whitePix); //bright, low saturation
+        inRange(hsv, Scalar(0, 0, 0), Scalar(180, 255, 60), darkPix);    //very low brightness
+
+        //fraction of white px vs dark... strip or solid
+        float total = static_cast<float>(countNonZero(mask));
+        float whiteFrac = countNonZero(whitePix & mask) / total;
+        float darkFrac = countNonZero(darkPix & mask) / total;
+
+                //range of reference indices this ball is allowed to match (0-6 = balls 1-7, 7 = ball 8, 8-14 = 9-15, 15 = white)
+        int lo, hi;
+        if (whiteFrac > 0.75f)      { lo = 15; hi = 15; } //white ball
+        else if (darkFrac > 0.5f)   { lo = 7;  hi = 7;  } //8 ball
+        else if (whiteFrac > 0.25f) { lo = 8;  hi = 14; } //stripe
+        else                        { lo = 0;  hi = 6;  } //solid
+
+
+        cout << "whiteFrac " << whiteFrac << "  darkFrac " << darkFrac << endl; //for checking thresholds
+
+        //compare against allowed reference histograms
+        for (int i = lo; i <= hi && i < referenceHistogram.size(); i++) {
+            if (referenceHistogram[i].empty()) continue;
             float score = scoreBallMatch(
                 hsv,
                 centre,
