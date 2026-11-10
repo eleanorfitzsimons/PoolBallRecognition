@@ -58,7 +58,7 @@ vector<Vec3f> findBalls(const Mat& original) {
 		1, //dp accymulator resolution
 		30, //min distance between circles
 		100, //param1: higher threshold for Canny edge detector  
-		8, //param2: threshold for center detection
+		12, //param2: threshold for center detection
 		15, //min radius
 		28 //max radius
 	);
@@ -462,8 +462,7 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& refer
     );
 
     return score;
-};
-
+};      
 vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram ) {
     
 
