@@ -148,7 +148,8 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
         for (const Vec3f& oldBall : result){
             //compare distance between centres
             if(norm(centre - Point2f(oldBall[0], oldBall[1]))< 24.0f ){
-
+                duplicate = true;
+                break;
             }
         }
         //skip if ball is already on the list
@@ -193,7 +194,7 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
                 int brightness = hsv.at<Vec3b>(y,x)[2];
 
                 //brightness inside ball
-                if (distance < 0.88f * radius){
+                if (distance < 0.68f * radius){
                     innerBrightness += brightness;
                     ++innerCount;
                 }
@@ -205,12 +206,13 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
                 }
 
                 //check edges near the circle boundary
-                if (distance > 0.75 * radius && distance <1.15f * radius){
+                if (distance > 0.75f * radius && distance < 1.15f * radius) {
+
                     ++edgePixels;
+
+                    if (edges.at<uchar>(y, x) > 0)
+                        ++edgeCount;
                 }
-                     if (edges.at<uchar>(y, x) > 0)
-                 ++edgeCount;
-         
 
                 //check how much of the ball is foreground
                 if (distance <= max(1.0f, float(R - 3))) {
