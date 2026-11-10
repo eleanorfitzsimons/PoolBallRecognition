@@ -646,7 +646,7 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
 
     int N = static_cast<int>(ballPositions.size());
     const int LABELS = 16;
-    
+
     //store scores for each detected ball against all 16 reference balls
     vector<vector<float>> score(
         N, vector<float>(LABELS, 0.0f)
@@ -654,53 +654,29 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
 
 
     //recognise each detected ball
-    for (const Point2f& centre : ballPositions) {
+    for (int i = 0; i < N; ++i) {
 
-        float bestScore = -1.0f;
-        int bestBall = -1;
-
-        //ball type from px inside elipse
-        Mat mask = Mat::zeros(hsv.size(), CV_8UC1);
-        ellipse(mask, centre, BALL_AXES, 0, 0, 360, Scalar(255), FILLED);
-
-        Mat whitePix, darkPix;
-        inRange(hsv, Scalar(0, 0, 150), Scalar(180, 60, 255), whitePix); //bright, low saturation
-        inRange(hsv, Scalar(0, 0, 0), Scalar(180, 255, 60), darkPix);    //very low brightness
-
-        //fraction of white px vs dark... strip or solid
-        float total = static_cast<float>(countNonZero(mask));
-        float whiteFrac = countNonZero(whitePix & mask) / total;
-        float darkFrac = countNonZero(darkPix & mask) / total;
-
-                //range of reference indices this ball is allowed to match (0-6 = balls 1-7, 7 = ball 8, 8-14 = 9-15, 15 = white)
-        int lo, hi;
-        if (whiteFrac > 0.75f)      { lo = 15; hi = 15; } //white ball
-        else if (darkFrac > 0.5f)   { lo = 7;  hi = 7;  } //8 ball
-        else if (whiteFrac > 0.25f) { lo = 8;  hi = 14; } //stripe
-        else                        { lo = 0;  hi = 6;  } //solid
+        //histogram of detected ball
+        Mat sampleHist = extractBallHist(hsv, ballPositions[i], BALL_AXES);
 
 
-        cout << "whiteFrac " << whiteFrac << "  darkFrac " << darkFrac << endl; //for checking thresholds
+        //fraction of dark px in detected bal
+        float sampleDarkFraction = getDarkFraction(hsv, ballPositions[i], BALL_AXES);
 
-        //compare against allowed reference histograms
-        for (int i = lo; i <= hi && i < referenceHistogram.size(); i++) {
-            if (referenceHistogram[i].empty()) continue;
-            float score = scoreBallMatch(
-                hsv,
-                centre,
-                BALL_AXES,
-                referenceHistogram[i]
-            );
+        for (int j = 0; j < LABELS; ++j) {
+            //bhattacharyya distance, smaller = better match
+            double distance = compareHist(sampleHist, referenceHistogram[j], HISTCMP_BHATTACHARYYA);
 
-            if (score > bestScore) {
-                bestScore = score;
-
-                //reference order: balls 1-15, then white
-                bestBall = (i == 15) ? 0 : i + 1;
-            }
+            //combine colout similarity with diff in darkness - 0.9 weights
+            score[i][j] = static_cast<float>(1.0 - distance) - 0.9f * abs(sampleDarkFraction - referenceDarkFraction[j]);
         }
+    }
+    //best match for each ball
+    for (int i = 0; i < N; ++i){
+        int best = static_cast<int>(max_element(score[i].begin(), score[i].end()) - score[i].begin());
 
-        predictedBalls.push_back(bestBall);
+        //ref 15 is whitel, rest are 1 to 15
+        predictedBalls[i] = (best == 15) ? 0 : best +1;
     }
 
     return predictedBalls;
@@ -1075,8 +1051,7 @@ void MyApplication() {
     }
 
     //recognise detected balls using back projection
-    vector<int> predictedBalls =
-        recogniseBalls(transformed, tablePositions, referenceHistograms);
+    vector<int> predictedBalls = recogniseBalls(transformed, tablePositions, referenceHistograms, referenceDarkFractions);
 
     //print recognised ball identities
     cout << "\nRECOGNITION RESULTS\n";
