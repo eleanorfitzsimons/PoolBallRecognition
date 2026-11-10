@@ -626,16 +626,31 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& refer
 
     return score;
 };      
-vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram ) {
+vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram, const vector<float> referenceDarkFraction ) {
     
 
-    vector<int> predictedBalls;
+    //-1 if not recognised
+    vector<int> predictedBalls(ballPositions.size(), -1);
+
+    //check reference data
+    if (referenceHistogram.size() != 16 || referenceDarkFraction.size() != 16){
+        cout << "Missing reference data" << endl;
+        return predictedBalls;
+    }
 
     //convert transformed image to HSV
     Mat hsv;
     cvtColor(transformed, hsv, COLOR_BGR2HSV);
 
     const Size BALL_AXES(16, 30);
+
+    int N = static_cast<int>(ballPositions.size());
+    const int LABELS = 16;
+    
+    //store scores for each detected ball against all 16 reference balls
+    vector<vector<float>> score(
+        N, vector<float>(LABELS, 0.0f)
+    );
 
 
     //recognise each detected ball
