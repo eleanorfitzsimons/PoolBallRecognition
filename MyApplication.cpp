@@ -499,7 +499,7 @@ float getDarkFraction(const Mat& hsv, Point2f centre, Size axes) {
 
 
 //train model
-vector<Mat> trainBallRecognition(){
+vector<Mat> trainBallRecognition(vector <float> & referenceDarkFractions){
     //load the training image
     Mat trainingImage = imread("Pool/AllBalls.jpeg");
 
@@ -565,6 +565,10 @@ vector<Mat> trainBallRecognition(){
     for (const Point2f & centre : referencePositions){
         Mat hist = extractBallHist(hsv, centre, BALL_AXES);
         referenceHistograms.push_back(hist);
+
+        //also save how much of each ball is dark
+        float darkFrac = getDarkFraction(hsv, centre, BALL_AXES);
+        referenceDarkFractions.push_back(darkFrac);
     }
 
     return referenceHistograms;
@@ -1044,7 +1048,16 @@ void MyApplication() {
     //reconginse balls
 
     //train using AllBalls.jpeg
-    vector<Mat> referenceHistograms = trainBallRecognition();
+    vector<float> referenceDarkFractions;
+    vector<Mat> referenceHistograms = trainBallRecognition(referenceDarkFractions);
+
+    //check all 16 training balls loaded
+    if (referenceHistograms.size() != 16 ||
+        referenceDarkFractions.size() != 16) {
+
+        cout << "Skipping recognition: incomplete training data" << endl;
+        return;
+    }
 
     //recognise detected balls using back projection
     vector<int> predictedBalls =
