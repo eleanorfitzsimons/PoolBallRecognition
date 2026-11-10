@@ -288,6 +288,15 @@ Mat segmentTable(const Mat& original) {
 ////////////////////////////////////
 vector<Point2f> loadGroundTruth(const string& imageName);//forward declaration, these might need to be reordered
 
+//removes white px from maks so only coloured part is used for the hist
+Mat removeWhite(const Mat& hsv, const Mat& mask) {
+    Mat whitePix, notWhite, colourMask;
+    inRange(hsv, Scalar(0, 0, 150), Scalar(180, 60, 255), whitePix);
+    bitwise_not(whitePix, notWhite);
+    bitwise_and(mask, notWhite, colourMask);
+    return colourMask;
+}
+
 
 //colour histogram from one ball
 Mat extractBallHist(const Mat& hsv, Point2f centre, Size axes){
@@ -306,7 +315,8 @@ Mat extractBallHist(const Mat& hsv, Point2f centre, Size axes){
         Scalar(255),
         FILLED
     );
-
+    //remove white px
+    ballMask = removeWhite(hsv, ballMask);
     //histogram parameters
     int histSize[] = {30, 32}; //hue and saturation bins
 
@@ -444,7 +454,8 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& refer
         Scalar(255),
         FILLED
     );
-
+    //remove white px form maks
+    ballMask = removeWhite(hsv, ballMask);
     //average back-projection response inside ball
     float score = static_cast<float>(
         mean(backProjection, ballMask)[0]
@@ -840,8 +851,14 @@ void MyApplication() {
     //evaluate detection
     if (!groundTruth.empty()) {
         vector<int> trueLabels = evalDetection(tablePositions, groundTruth);
+        //diagnostic: true identity of each candidate (-1 = false positive)
+        for (int i = 0; i < trueLabels.size(); i++) {
+            cout << "Candidate " << i + 1 << " true ball " << trueLabels[i] << endl;
+        }
+
         evalRecognition(predictedBalls, trueLabels);
     }
+    
     else {
         cout << "Skipping evaluation: no ground truth loaded" << endl;
     }
