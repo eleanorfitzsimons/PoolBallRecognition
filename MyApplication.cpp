@@ -168,7 +168,7 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
 
         //vals to measure brightness
         double innerBrightness = 0.0;
-        double surroundBrightness= 0.0;
+        double surroundBrightness = 0.0;
 
         int innerCount = 0;
         int surroundCount = 0;
@@ -221,9 +221,27 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
                         ++foregroundCount;
                 
                 }
-            }
+            }//end of dx loop
+        }//end of dy loop
+
+        //avoid zero div
+        if(innerCount == 0 || surroundCount == 0 || edgePixels == 0 || diskCount == 0)
+            continue;
+        
+        //diff betw surroundign cloth and ball brightness
+        double contrast = surroundBrightness / surroundCount = innerBrightness/ innerCount;
+        double edgeFraction = double(edgeCount) / edgePixels; // frac of px that are edges
+        double foregroundFraction = double(foregroundCount) / diskCount;
+
+        //only keep circles that look like dark balls
+        //TUNE THE TH!!!!
+        if (contrast > 50.0 && edgeFraction > 0.14 &&
+            foregroundFraction > 0.20 && foregroundFraction < 0.50) {
+
+            result.push_back(ball);
         }
-    }
+
+    }//end of loop through weak circles
     
     return result;
 }
