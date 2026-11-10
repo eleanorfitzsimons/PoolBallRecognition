@@ -156,7 +156,75 @@ vector<Vec3f> recoverDarkBalls(const Mat&original, const vector<Vec3f> & accepte
             continue;
         if (pointPolygonTest(TABLE_CORNERS, centre, true) < 0.6f * radius)
             continue;
+
+        //inside image
+        const int R = cvRound(radius);
+        const int cx = cvRound(centre.x);
+        const int cy = cvRound(centre.y);
+        const int extent = 2 * R;
+
+        if (cx - extent < 0 || cy - extent < 0 || cx + extent >= original.cols || cy + extent >= original.rows)
+            continue;
+
+        //vals to measure brightness
+        double innerBrightness = 0.0;
+        double surroundBrightness= 0.0;
+
+        int innerCount = 0;
+        int surroundCount = 0;
+
+        //count for edge px and fg px
+        int edgeCount = 0; 
+        int edgePixels = 0;
+        int foregroundCount = 0;
+        int diskCount = 0;
+
+        //look at px aroudn ball
+        for (int dy = -extent; dy <= extent; ++dy) {
+            for (int dx = -extent; dx <= extent; ++dx) {
+
+                //dist of px from centre
+                float distance = sqrt(float(dx * dx + dy * dy)); //euclidian dist
+
+                int x = cx + dx;
+                int y = cy + dy;
+
+                //brighness from v channlel in hsv
+                int brightness = hsv.at<Vec3b>(y,x)[2];
+
+                //brightness inside ball
+                if (distance < 0.88f * radius){
+                    innerBrightness += brightness;
+                    ++innerCount;
+                }
+
+                //brightness of area round ball
+                if (distance > 1.2f * radius && distance < 1.7f * radius){
+                    surroundBrightness += brightness;
+                    ++surroundCount;
+                }
+
+                //check edges near the circle boundary
+                if (distance > 0.75 * radius && distance <1.15f * radius){
+                    ++edgePixels;
+                }
+                     if (edges.at<uchar>(y, x) > 0)
+                 ++edgeCount;
+         
+
+                //check how much of the ball is foreground
+                if (distance <= max(1.0f, float(R - 3))) {
+
+                    ++diskCount;
+
+                    if (fgMask.at<uchar>(y, x) > 0)
+                        ++foregroundCount;
+                
+                }
+            }
+        }
     }
+    
     return result;
 }
 
