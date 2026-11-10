@@ -415,14 +415,6 @@ Mat segmentTable(const Mat& original) {
 ////////////////////////////////////
 vector<Point2f> loadGroundTruth(const string& imageName);//forward declaration, these might need to be reordered
 
-//removes white px from maks so only coloured part is used for the hist
-Mat removeWhite(const Mat& hsv, const Mat& mask) {
-    Mat whitePix, notWhite, colourMask;
-    inRange(hsv, Scalar(0, 0, 150), Scalar(180, 60, 255), whitePix);
-    bitwise_not(whitePix, notWhite);
-    bitwise_and(mask, notWhite, colourMask);
-    return colourMask;
-}
 
 
 //colour histogram from one ball
@@ -442,8 +434,7 @@ Mat extractBallHist(const Mat& hsv, Point2f centre, Size axes){
         Scalar(255),
         FILLED
     );
-    //remove white px
-    ballMask = removeWhite(hsv, ballMask);
+   
     //histogram parameters
     int histSize[] = {30, 32}; //hue and saturation bins
 
@@ -471,6 +462,42 @@ Mat extractBallHist(const Mat& hsv, Point2f centre, Size axes){
     return hist;
 
 }
+
+//fraction of dark px in one ball
+float getDarkFraction(const Mat& hsv, Point2f centre, Size axes) {
+
+     //make a mask around the ball
+     Mat mask = Mat::zeros(hsv.size(), CV_8UC1);
+
+     ellipse(mask, centre, axes, 0, 0, 360,
+             Scalar(255), FILLED);
+
+     //total pixels inside ball mask
+     int total = countNonZero(mask);
+
+     //avoid dividing by zero
+     if (total == 0)
+         return 0.0f;
+
+     //find dark pixels using hsv brightness
+     Mat darkPixels;
+
+     inRange(hsv,
+             Scalar(0, 0, 0),
+             Scalar(180, 255, 59),
+             darkPixels);
+
+     //only keep dark pixels inside ball
+     Mat darkInside;
+     bitwise_and(darkPixels, mask, darkInside);
+
+     //calculate fraction of ball that is dark
+     return static_cast<float>(countNonZero(darkInside)) / total;
+ }
+
+
+
+
 //train model
 vector<Mat> trainBallRecognition(){
     //load the training image
@@ -587,8 +614,7 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& refer
         Scalar(255),
         FILLED
     );
-    //remove white px form maks
-    ballMask = removeWhite(hsv, ballMask);
+  
     //average back-projection response inside ball
     float score = static_cast<float>(
         mean(backProjection, ballMask)[0]
