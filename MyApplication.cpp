@@ -626,14 +626,14 @@ float scoreBallMatch(const Mat& hsv, Point2f centre, Size axes, const Mat& refer
 
     return score;
 };      
-vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram, const vector<float> referenceDarkFraction ) {
+vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballPositions, const vector<Mat> & referenceHistogram, const vector<float> &referenceDarkFractions ) {
     
 
     //-1 if not recognised
     vector<int> predictedBalls(ballPositions.size(), -1);
 
     //check reference data
-    if (referenceHistogram.size() != 16 || referenceDarkFraction.size() != 16){
+    if (referenceHistogram.size() != 16 || referenceDarkFractions.size() != 16){
         cout << "Missing reference data" << endl;
         return predictedBalls;
     }
@@ -668,15 +668,65 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
             double distance = compareHist(sampleHist, referenceHistogram[j], HISTCMP_BHATTACHARYYA);
 
             //combine colout similarity with diff in darkness - 0.9 weights
-            score[i][j] = static_cast<float>(1.0 - distance) - 0.9f * abs(sampleDarkFraction - referenceDarkFraction[j]);
+            score[i][j] = static_cast<float>(1.0 - distance) - 0.9f * abs(sampleDarkFraction - referenceDarkFractions[j]);
         }
     }
-    //best match for each ball
-    for (int i = 0; i < N; ++i){
-        int best = static_cast<int>(max_element(score[i].begin(), score[i].end()) - score[i].begin());
+    
 
-        //ref 15 is whitel, rest are 1 to 15
-        predictedBalls[i] = (best == 15) ? 0 : best +1;
+    //best possible match - greedy matching algo
+    //store psosible match betwen detection and ball no
+    struct BallMatch{
+        float similarity;
+        int candidate;
+        int identity;
+    };
+
+    vector <BallMatch> matches;
+
+    //get all possible matches
+    for (int i = 0; i < N; ++i){
+        for (int j = 0; j < LABELS; ++j) {
+            matches.push_back({score[i][j], i, j});
+        }
+        
+        //sort matches highest scores fst
+        sort(matches.begin(), matches.end(), [](const BallMatch & a, const BallMatch & b)){
+
+            if (a.similarity != b.similarity)
+                return a.candidate > b.candidate;
+            
+            if (a.candidate != b.candidate)
+                return a.candidate > b.candidate;
+
+            return a.identity > b.identity;
+        }
+
+        //-1 for no detection assinged
+        vector<int> assignment(N, -1);
+
+        //track ball nos used
+        vector<bool> used(LABELS, false);
+
+        //go throgh best matches first
+        for (const BallMatch & match : matches){
+
+            //ignore with neg score
+            if(match.similarity <= 0)
+                break;
+
+            //skip if alr used
+            if (assignment[match.candidate] != -1 || used[match.identity])
+                continue;
+            
+            //assign this ball number to the candidate
+            assignment[match.candidate] = match.identity;
+            used[match.identity] = true;
+        }
+
+        for(int i = 0; i < N; ++i){
+            int j = assignment[i];
+            predictedBalls[i] = (j == 15) ? 0 : (j >= 0 ? j + 1 : -1);
+        }
     }
 
     return predictedBalls;
@@ -933,7 +983,7 @@ void evalRecognition(const vector<int>& predicted, const vector<int>& trueLabels
     if (predicted[i] == trueLabels[i])
         correct++;
     }
-    
+
     cout << "\nRECOGNITION EVALUATION\n";
     cout << "Correct: " << correct << " / " << total << endl;
 
@@ -1112,5 +1162,4 @@ int main() {
 //mask needs to be changed for saturation
 
 
-//striped vs solid
-//change 
+//the balls in 3 and 4 too close to edge, need to test and tune
