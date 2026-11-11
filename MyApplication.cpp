@@ -693,7 +693,7 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
     sort(matches.begin(), matches.end(), [](const BallMatch & a, const BallMatch & b){
 
         if (a.similarity != b.similarity)
-            return a.candidate > b.candidate;
+            return a.similarity > b.similarity;
         
         if (a.candidate != b.candidate)
             return a.candidate > b.candidate;
@@ -741,7 +741,7 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
             int old = assignment[i];
 
             //curr similarity score
-            float oldScore = (old >= 00) ? score[i][old] : 0;
+            float oldScore = (old >= 00) ? score[i][old] : 0.0f;
 
             for (int j =0; j < LABELS; ++j){
 
@@ -757,26 +757,65 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
                     first = i;
                     second = j;
                 }
-
+            }//end of j loop
                 //leave bad match usassinged
-                if (old >= 0 && -oldScore > bestGain){
-                    bestGain = -oldScore;
-                    changeType = 1;
-                    first = i;
-                    second = -1;
-                }
-
+            if (old >= 0 && -oldScore > bestGain){
+                bestGain = -oldScore;
+                changeType = 1;
+                first = i;
+                second = -1;
             }
 
-            //try swap identities betw assignment
+        }//close i looop
 
-            //stop if nothing changes score
-            if (changeType == 0)
-                break;
-            //change to diff num
+        //try swap identities betw assignment
+        for (int i = 0; i < N; ++i) {
+            for (int k = i + 1; k < N; ++k) {
 
+                int j = assignment[i];
+                int l = assignment[k];
 
+                //only swap candidates that already have numbers
+                if (j < 0 || l < 0)
+                    continue;
+
+                //difference in total score if numbers are swapped
+                float gain = score[i][l] + score[k][j] - score[i][j] - score[k][l];
+
+                if (gain > bestGain) {
+                    bestGain = gain;
+                    changeType = 2;
+                    first = i;
+                    second = k;
+                }
+            }
         }
+
+        //stop if nothing changes score
+        if (changeType == 0)
+            break;
+
+
+        //change to diff num
+        if (changeType == 1) {
+
+            int old = assignment[first];
+
+            if (old >= 0)
+                used[old] = false;
+
+            assignment[first] = second;
+
+            if (second >= 0)
+                used[second] = true;
+
+        } else {
+
+            //swap the two chosen ball numbers
+            swap(assignment[first], assignment[second]);
+ 
+        }
+    
     }
 
 
