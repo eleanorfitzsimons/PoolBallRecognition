@@ -688,47 +688,46 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
         for (int j = 0; j < LABELS; ++j) {
             matches.push_back({score[i][j], i, j});
         }
+    }
+    //sort matches highest scores fst
+    sort(matches.begin(), matches.end(), [](const BallMatch & a, const BallMatch & b){
+
+        if (a.similarity != b.similarity)
+            return a.candidate > b.candidate;
         
-        //sort matches highest scores fst
-        sort(matches.begin(), matches.end(), [](const BallMatch & a, const BallMatch & b)){
+        if (a.candidate != b.candidate)
+            return a.candidate > b.candidate;
 
-            if (a.similarity != b.similarity)
-                return a.candidate > b.candidate;
-            
-            if (a.candidate != b.candidate)
-                return a.candidate > b.candidate;
+        return a.identity > b.identity;
+    });
 
-            return a.identity > b.identity;
-        }
+    //-1 for no detection assinged
+    vector<int> assignment(N, -1);
 
-        //-1 for no detection assinged
-        vector<int> assignment(N, -1);
+    //track ball nos used
+    vector<bool> used(LABELS, false);
 
-        //track ball nos used
-        vector<bool> used(LABELS, false);
+    //go throgh best matches first
+    for (const BallMatch & match : matches){
 
-        //go throgh best matches first
-        for (const BallMatch & match : matches){
+        //ignore with neg score
+        if(match.similarity <= 0)
+            break;
 
-            //ignore with neg score
-            if(match.similarity <= 0)
-                break;
-
-            //skip if alr used
-            if (assignment[match.candidate] != -1 || used[match.identity])
-                continue;
-            
-            //assign this ball number to the candidate
-            assignment[match.candidate] = match.identity;
-            used[match.identity] = true;
-        }
-
-        for(int i = 0; i < N; ++i){
-            int j = assignment[i];
-            predictedBalls[i] = (j == 15) ? 0 : (j >= 0 ? j + 1 : -1);
-        }
+        //skip if alr used
+        if (assignment[match.candidate] != -1 || used[match.identity])
+            continue;
+        
+        //assign this ball number to the candidate
+        assignment[match.candidate] = match.identity;
+        used[match.identity] = true;
     }
 
+    for(int i = 0; i < N; ++i){
+        int j = assignment[i];
+        predictedBalls[i] = (j == 15) ? 0 : (j >= 0 ? j + 1 : -1);
+    }
+    
     return predictedBalls;
 }
 
