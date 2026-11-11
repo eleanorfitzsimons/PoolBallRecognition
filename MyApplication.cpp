@@ -723,6 +723,64 @@ vector<int> recogniseBalls(const Mat & transformed, const vector<Point2f> &ballP
         used[match.identity] = true;
     }
 
+    //improvement after greedy-change to free no or swap
+    const float MIN_IMPROVEMENT = 1e-9f;
+
+    //limit no pass
+    for (int pass = 0; pass <100 ; ++pass){
+        float bestGain = MIN_IMPROVEMENT;
+
+        //O NO CHANGE, 1 CHANGE, 2 SWAP
+        int changeType = 0;
+        int first = -1;
+        int second = -1;
+
+        //change to unused
+        for (int i = 0; i < N;  ++i){
+             
+            int old = assignment[i];
+
+            //curr similarity score
+            float oldScore = (old >= 00) ? score[i][old] : 0;
+
+            for (int j =0; j < LABELS; ++j){
+
+                //skip nums alr usedd
+                if (used[j] || j == old)
+                    continue;
+                
+                float gain = score[i][j] - oldScore; //check if new num give better score
+                
+                if (gain > bestGain){
+                    bestGain = gain;
+                    changeType = 1;
+                    first = i;
+                    second = j;
+                }
+
+                //leave bad match usassinged
+                if (old >= 0 && -oldScore > bestGain){
+                    bestGain = -oldScore;
+                    changeType = 1;
+                    first = i;
+                    second = -1;
+                }
+
+            }
+
+            //try swap identities betw assignment
+
+            //stop if nothing changes score
+            if (changeType == 0)
+                break;
+            //change to diff num
+
+
+        }
+    }
+
+
+    //convert ref indcies to ball nos for print
     for(int i = 0; i < N; ++i){
         int j = assignment[i];
         predictedBalls[i] = (j == 15) ? 0 : (j >= 0 ? j + 1 : -1);
